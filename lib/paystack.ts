@@ -87,6 +87,47 @@ export async function verifyPaystackTransaction(
   return json.data
 }
 
+type PaystackRefundResponse = {
+  status: boolean
+  message: string
+  data: {
+    status: string
+    transaction_reference: string
+    amount: number
+  }
+}
+
+/**
+ * Refunds a previously verified charge, in full or in part. Used by admin
+ * dispute resolution — see app/actions/admin.ts. `amountNaira` omitted
+ * means a full refund; provided means a partial refund (the 'split'
+ * outcome), leaving the remainder with the platform/seller.
+ */
+export async function refundPaystackTransaction(args: {
+  reference: string
+  amountNaira?: number
+}): Promise<PaystackRefundResponse['data']> {
+  const res = await fetch(`${PAYSTACK_BASE_URL}/refund`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secretKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      transaction: args.reference,
+      ...(args.amountNaira != null
+        ? { amount: Math.round(args.amountNaira * 100) }
+        : {}),
+    }),
+  })
+
+  const json = (await res.json()) as PaystackRefundResponse
+  if (!res.ok || !json.status) {
+    throw new Error(json.message || 'Could not process refund with Paystack')
+  }
+  return json.data
+}
+
 /**
  * Paystack signs webhook bodies with HMAC-SHA512 over the raw request body,
  * using the secret key. Always verify this before trusting a webhook —

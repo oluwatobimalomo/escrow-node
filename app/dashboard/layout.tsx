@@ -28,6 +28,15 @@ export default async function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-2">
+            {session.user.role === 'admin' && (
+              <Button
+                render={<Link href="/admin/disputes" />}
+                variant="outline"
+                size="sm"
+              >
+                Admin
+              </Button>
+            )}
             <Button render={<Link href="/dashboard/new" />} size="sm">
               <Plus className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">New transaction</span>

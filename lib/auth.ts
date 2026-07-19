@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { siwe } from 'better-auth/plugins'
+import { siwe, admin } from 'better-auth/plugins'
 import { generateRandomString } from 'better-auth/crypto'
 import { verifyMessage } from 'viem'
 import { pool } from '@/lib/db'
@@ -32,6 +32,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
+    // A user can create an account but can't sign in (403) until they've
+    // clicked the verification link. Doesn't affect SIWE wallet sign-in —
+    // this block only governs the email/password provider.
     requireEmailVerification: true,
   },
   emailVerification: {
@@ -60,6 +63,10 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 1 day
   },
   plugins: [
+    admin({
+      defaultRole: 'user',
+      adminRoles: ['admin'],
+    }),
     siwe({
       domain: resolveDomain(),
       // Wallet-only sign-in is allowed without an email. Payments still

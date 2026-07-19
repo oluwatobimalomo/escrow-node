@@ -17,6 +17,12 @@ export const user = pgTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('emailVerified').notNull().default(false),
   image: text('image'),
+  // Better Auth admin plugin fields. "admin" is the only elevated role in
+  // use — see lib/auth.ts. Do not rename; the plugin writes these by name.
+  role: text('role').default('user'),
+  banned: boolean('banned').default(false),
+  banReason: text('banReason'),
+  banExpires: timestamp('banExpires'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
@@ -106,6 +112,12 @@ export const transactions = pgTable('transactions', {
   shippedAt: timestamp('shippedAt'),
   deliveredAt: timestamp('deliveredAt'),
   releasedAt: timestamp('releasedAt'),
+  // Set when an admin-forced dispute resolution triggers a real Paystack
+  // refund (full or partial, as with a 'split' outcome). Null for
+  // transactions that were never disputed/refunded, or refunded before
+  // this tracking existed.
+  refundAmount: numeric('refundAmount', { precision: 14, scale: 2 }),
+  refundReference: text('refundReference'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
@@ -126,7 +138,13 @@ export const disputes = pgTable('disputes', {
   reason: text('reason').notNull(),
   details: text('details'),
   status: text('status').notNull().default('open'),
+  // 'release' | 'refund' | 'split' — mutual-consent resolutions only ever
+  // produce 'release'/'refund'; 'split' is admin-only (see app/actions/admin.ts).
   resolution: text('resolution'),
+  // Set only when an admin force-resolves rather than the parties settling
+  // between themselves.
+  resolvedById: text('resolvedById'),
+  adminNote: text('adminNote'),
   resolvedAt: timestamp('resolvedAt'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
