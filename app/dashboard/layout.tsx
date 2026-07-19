@@ -28,6 +28,13 @@ export default async function DashboardLayout({
           </Link>
 
           <div className="flex items-center gap-2">
+            <Button
+              render={<Link href="/dashboard/profile" />}
+              variant="ghost"
+              size="sm"
+            >
+              Profile
+            </Button>
             {session.user.role === 'admin' && (
               <Button
                 render={<Link href="/admin/disputes" />}

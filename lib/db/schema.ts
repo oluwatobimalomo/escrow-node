@@ -17,6 +17,7 @@ export const user = pgTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('emailVerified').notNull().default(false),
   image: text('image'),
+  bio: text('bio'),
   // Better Auth admin plugin fields. "admin" is the only elevated role in
   // use — see lib/auth.ts. Do not rename; the plugin writes these by name.
   role: text('role').default('user'),

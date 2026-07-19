@@ -83,7 +83,16 @@ export default async function TransactionPage({
           <div>
             <dt className="text-sm text-muted-foreground">Buyer</dt>
             <dd className="mt-0.5 font-medium text-foreground">
-              {buyer ? buyer.name : (tx.creatorRole === 'seller' ? tx.counterpartyEmail : '—')}
+              {buyer ? (
+                <Link
+                  href={`/dashboard/users/${buyer.id}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {buyer.name}
+                </Link>
+              ) : (
+                tx.creatorRole === 'seller' ? tx.counterpartyEmail : '—'
+              )}
               {tx.buyerId === me.id && (
                 <span className="ml-1.5 text-xs text-muted-foreground">(you)</span>
               )}
@@ -92,7 +101,16 @@ export default async function TransactionPage({
           <div>
             <dt className="text-sm text-muted-foreground">Seller</dt>
             <dd className="mt-0.5 font-medium text-foreground">
-              {seller ? seller.name : (tx.creatorRole === 'buyer' ? tx.counterpartyEmail : '—')}
+              {seller ? (
+                <Link
+                  href={`/dashboard/users/${seller.id}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {seller.name}
+                </Link>
+              ) : (
+                tx.creatorRole === 'buyer' ? tx.counterpartyEmail : '—'
+              )}
               {tx.sellerId === me.id && (
                 <span className="ml-1.5 text-xs text-muted-foreground">(you)</span>
               )}
@@ -164,7 +182,16 @@ export default async function TransactionPage({
                   <Card className="gap-2 p-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-foreground">
-                        {reviewer?.name ?? 'Participant'}
+                        {reviewer ? (
+                          <Link
+                            href={`/dashboard/users/${reviewer.id}`}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {reviewer.name}
+                          </Link>
+                        ) : (
+                          'Participant'
+                        )}
                         {review.reviewerId === me.id && (
                           <span className="ml-1.5 text-xs text-muted-foreground">
                             (you)
