@@ -18,12 +18,31 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [verificationSent, setVerificationSent] = useState(false)
+  const [unverified, setUnverified] = useState(false)
+  const [resending, setResending] = useState(false)
 
   const isSignUp = mode === 'sign-up'
+
+  const handleResend = async () => {
+    setResending(true)
+    setError(null)
+    const { error } = await authClient.sendVerificationEmail({
+      email,
+      callbackURL: '/dashboard',
+    })
+    setResending(false)
+    if (error) {
+      setError(error.message ?? 'Could not resend the email')
+    } else {
+      setVerificationSent(true)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setUnverified(false)
     setLoading(true)
 
     const { error } = isSignUp
@@ -33,7 +52,19 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     setLoading(false)
 
     if (error) {
+      if (error.status === 403) {
+        // Correct credentials, but the email hasn't been verified yet.
+        setUnverified(true)
+        return
+      }
       setError(error.message ?? 'Something went wrong')
+      return
+    }
+
+    if (isSignUp) {
+      // requireEmailVerification means sign-up doesn't create a session —
+      // point the user at their inbox instead of the dashboard.
+      setVerificationSent(true)
       return
     }
 
@@ -54,6 +85,31 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         </Link>
 
         <Card className="p-6">
+          {verificationSent ? (
+            <div className="flex flex-col gap-4 text-center">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
+                Check your email
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                We sent a verification link to <strong>{email}</strong>.
+                Click it to activate your account, then come back and sign
+                in.
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleResend}
+                disabled={resending}
+              >
+                {resending ? 'Sending...' : "Didn't get it? Resend"}
+              </Button>
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="mb-6">
             <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
               {isSignUp ? 'Create your account' : 'Welcome back'}
@@ -64,6 +120,24 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
                 : 'Sign in to your account to continue'}
             </p>
           </div>
+
+          {unverified && (
+            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm text-amber-900">
+                Your email isn&apos;t verified yet. Check your inbox for the
+                link, or{' '}
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="font-medium underline underline-offset-4 disabled:opacity-60"
+                >
+                  {resending ? 'sending...' : 'resend it'}
+                </button>
+                .
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {isSignUp && (
@@ -139,6 +213,8 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
               {isSignUp ? 'Sign in' : 'Sign up'}
             </Link>
           </p>
+            </>
+          )}
         </Card>
       </div>
     </main>

@@ -3,6 +3,7 @@ import { siwe } from 'better-auth/plugins'
 import { generateRandomString } from 'better-auth/crypto'
 import { verifyMessage } from 'viem'
 import { pool } from '@/lib/db'
+import { sendEmail, verificationEmailHtml } from '@/lib/email'
 
 function resolveDomain() {
   const url =
@@ -31,6 +32,18 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
+    requireEmailVerification: true,
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: 'Verify your email — TrustLock',
+        html: verificationEmailHtml(url),
+      })
+    },
   },
   trustedOrigins: [
     ...(process.env.NODE_ENV === 'development'
