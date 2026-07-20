@@ -11,6 +11,7 @@ import {
 } from '@/lib/db/schema'
 import { generateTransactionCode } from '@/lib/escrow'
 import { initializePaystackTransaction } from '@/lib/paystack'
+import { calculatePayout, payoutScheduledFor } from '@/lib/payout'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -359,17 +360,27 @@ export async function confirmDelivery(id: string) {
   if (!tx) throw new Error('Only the buyer can confirm delivery')
 
   const now = new Date()
+  const { feeAmount, payoutAmount } = calculatePayout(Number.parseFloat(tx.amount))
   await db
     .update(transactions)
     .set({
       status: 'completed',
       deliveredAt: now,
       releasedAt: now,
+      platformFeeAmount: String(feeAmount),
+      payoutAmount: String(payoutAmount),
+      payoutStatus: 'scheduled',
+      payoutScheduledAt: payoutScheduledFor(now),
       updatedAt: now,
     })
     .where(eq(transactions.id, id))
   await logEvent(id, me.id, 'delivered', 'Delivery confirmed by buyer')
-  await logEvent(id, null, 'released', 'Escrow released to seller')
+  await logEvent(
+    id,
+    null,
+    'released',
+    `Escrow released — payout of ${payoutAmount} scheduled after the cooling-off window`,
+  )
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }

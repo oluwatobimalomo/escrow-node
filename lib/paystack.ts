@@ -128,6 +128,130 @@ export async function refundPaystackTransaction(args: {
   return json.data
 }
 
+type PaystackBank = {
+  name: string
+  code: string
+  active: boolean
+}
+
+/** Nigerian banks, for populating a bank-selection dropdown. */
+export async function listNigerianBanks(): Promise<PaystackBank[]> {
+  const res = await fetch(
+    `${PAYSTACK_BASE_URL}/bank?currency=NGN&country=nigeria`,
+    { headers: { Authorization: `Bearer ${secretKey()}` } },
+  )
+  const json = (await res.json()) as {
+    status: boolean
+    message: string
+    data: PaystackBank[]
+  }
+  if (!res.ok || !json.status) {
+    throw new Error(json.message || 'Could not load bank list')
+  }
+  return json.data.filter((b) => b.active)
+}
+
+/**
+ * Confirms an account number actually belongs to a named account at the
+ * given bank, before it's saved as a payout destination. Never skip this —
+ * it's the only thing standing between a typo'd account number and money
+ * going to a stranger.
+ */
+export async function resolveBankAccount(args: {
+  accountNumber: string
+  bankCode: string
+}): Promise<{ accountNumber: string; accountName: string }> {
+  const res = await fetch(
+    `${PAYSTACK_BASE_URL}/bank/resolve?account_number=${encodeURIComponent(args.accountNumber)}&bank_code=${encodeURIComponent(args.bankCode)}`,
+    { headers: { Authorization: `Bearer ${secretKey()}` } },
+  )
+  const json = (await res.json()) as {
+    status: boolean
+    message: string
+    data: { account_number: string; account_name: string }
+  }
+  if (!res.ok || !json.status) {
+    throw new Error(
+      json.message || 'Could not verify that account number — double check it',
+    )
+  }
+  return {
+    accountNumber: json.data.account_number,
+    accountName: json.data.account_name,
+  }
+}
+
+/** Registers a payout destination with Paystack once, reused for every transfer. */
+export async function createTransferRecipient(args: {
+  accountName: string
+  accountNumber: string
+  bankCode: string
+}): Promise<{ recipientCode: string }> {
+  const res = await fetch(`${PAYSTACK_BASE_URL}/transferrecipient`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secretKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'nuban',
+      name: args.accountName,
+      account_number: args.accountNumber,
+      bank_code: args.bankCode,
+      currency: 'NGN',
+    }),
+  })
+  const json = (await res.json()) as {
+    status: boolean
+    message: string
+    data: { recipient_code: string }
+  }
+  if (!res.ok || !json.status) {
+    throw new Error(json.message || 'Could not register payout account')
+  }
+  return { recipientCode: json.data.recipient_code }
+}
+
+type PaystackTransferResponse = {
+  status: boolean
+  message: string
+  data: { status: string; reference: string; transfer_code: string }
+}
+
+/**
+ * Sends money to a previously-created recipient. Requires Transfers to be
+ * enabled on the Paystack account (Dashboard → Settings → Preferences),
+ * and OTP-based transfer finalization turned OFF — an automated cron job
+ * has no way to enter an OTP, so leaving that on will make every transfer
+ * hang in a pending/otp state forever.
+ */
+export async function initiateTransfer(args: {
+  recipientCode: string
+  amountNaira: number
+  reference: string
+  reason: string
+}): Promise<PaystackTransferResponse['data']> {
+  const res = await fetch(`${PAYSTACK_BASE_URL}/transfer`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secretKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      source: 'balance',
+      amount: Math.round(args.amountNaira * 100),
+      recipient: args.recipientCode,
+      reference: args.reference,
+      reason: args.reason,
+    }),
+  })
+  const json = (await res.json()) as PaystackTransferResponse
+  if (!res.ok || !json.status) {
+    throw new Error(json.message || 'Transfer failed')
+  }
+  return json.data
+}
+
 /**
  * Paystack signs webhook bodies with HMAC-SHA512 over the raw request body,
  * using the secret key. Always verify this before trusting a webhook —

@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { transactions, disputes, user, transactionEvents } from '@/lib/db/schema'
 import { refundPaystackTransaction } from '@/lib/paystack'
+import { calculatePayout, payoutScheduledFor } from '@/lib/payout'
 import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -106,6 +107,7 @@ export async function adminResolveDispute(
   if (tx.status !== 'disputed')
     throw new Error('Transaction is not currently in a disputed state')
 
+  const totalAmount = Number.parseFloat(tx.amount)
   let refundAmount: number | null = null
   let refundReference: string | null = null
 
@@ -115,7 +117,6 @@ export async function adminResolveDispute(
         'No Paystack reference on this transaction — cannot process a refund',
       )
     }
-    const totalAmount = Number.parseFloat(tx.amount)
     const amountNaira =
       outcome === 'split'
         ? options.splitToBuyerNaira
@@ -142,6 +143,20 @@ export async function adminResolveDispute(
   }
 
   const now = new Date()
+
+  // 'release': seller gets the full amount, fee-deducted, on the normal
+  // schedule. 'split': seller gets whatever's left after the buyer's
+  // refund — same fee/cooling-off treatment, just on the remainder.
+  let sellerFeeAmount: number | null = null
+  let sellerPayoutAmount: number | null = null
+  if (outcome === 'release' || outcome === 'split') {
+    const sellerGross =
+      outcome === 'release' ? totalAmount : totalAmount - (refundAmount ?? 0)
+    const calc = calculatePayout(sellerGross)
+    sellerFeeAmount = calc.feeAmount
+    sellerPayoutAmount = calc.payoutAmount
+  }
+
   await db
     .update(disputes)
     .set({
@@ -165,16 +180,20 @@ export async function adminResolveDispute(
       releasedAt: outcome === 'release' ? now : null,
       refundAmount: refundAmount != null ? String(refundAmount) : null,
       refundReference,
+      platformFeeAmount: sellerFeeAmount != null ? String(sellerFeeAmount) : null,
+      payoutAmount: sellerPayoutAmount != null ? String(sellerPayoutAmount) : null,
+      payoutStatus: sellerPayoutAmount != null ? 'scheduled' : null,
+      payoutScheduledAt: sellerPayoutAmount != null ? payoutScheduledFor(now) : null,
       updatedAt: now,
     })
     .where(eq(transactions.id, tx.id))
 
   const summary =
     outcome === 'release'
-      ? 'Admin force-resolved dispute — funds released to seller'
+      ? `Admin force-resolved dispute — payout of ${sellerPayoutAmount} scheduled for seller`
       : outcome === 'refund'
         ? 'Admin force-resolved dispute — full refund issued to buyer'
-        : `Admin force-resolved dispute — split: ₦${refundAmount} refunded to buyer, remainder to seller`
+        : `Admin force-resolved dispute — split: ₦${refundAmount} refunded to buyer, ₦${sellerPayoutAmount} payout scheduled for seller`
   await logEvent(tx.id, admin.id, 'dispute_resolved', summary)
 
   revalidatePath('/admin/disputes')

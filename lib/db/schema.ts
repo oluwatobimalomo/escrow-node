@@ -119,6 +119,17 @@ export const transactions = pgTable('transactions', {
   // this tracking existed.
   refundAmount: numeric('refundAmount', { precision: 14, scale: 2 }),
   refundReference: text('refundReference'),
+  // Seller payout tracking. 'pending' until the transaction is actually
+  // completed; 'scheduled' once the cooling-off window starts (see
+  // lib/payout.ts); 'blocked_no_bank_details' if the window elapses and the
+  // seller still hasn't added payout details; 'paid' once the Paystack
+  // transfer succeeds; 'failed' if Paystack rejects it.
+  platformFeeAmount: numeric('platformFeeAmount', { precision: 14, scale: 2 }),
+  payoutAmount: numeric('payoutAmount', { precision: 14, scale: 2 }),
+  payoutStatus: text('payoutStatus').default('pending'),
+  payoutScheduledAt: timestamp('payoutScheduledAt'),
+  payoutReference: text('payoutReference'),
+  payoutAt: timestamp('payoutAt'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
@@ -162,6 +173,29 @@ export const reviews = pgTable('reviews', {
 })
 
 export type WalletAddress = typeof walletAddress.$inferSelect
+
+// A seller's bank account for receiving payouts. One row per linked
+// account; `isDefault` marks the one payouts actually use. The Paystack
+// recipient code is created once (via lib/paystack.ts createTransferRecipient)
+// and reused for every transfer — Paystack doesn't need it recreated per
+// payout.
+export const payoutAccounts = pgTable('payoutAccounts', {
+  id: text('id').primaryKey(),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  bankCode: text('bankCode').notNull(),
+  bankName: text('bankName').notNull(),
+  accountNumber: text('accountNumber').notNull(),
+  // Resolved from Paystack at save time, never taken from client input
+  // directly — this is what confirms the account number actually belongs
+  // to a real, named account before money ever goes near it.
+  accountName: text('accountName').notNull(),
+  paystackRecipientCode: text('paystackRecipientCode').notNull(),
+  isDefault: boolean('isDefault').notNull().default(true),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+export type PayoutAccount = typeof payoutAccounts.$inferSelect
 export type Transaction = typeof transactions.$inferSelect
 export type TransactionEvent = typeof transactionEvents.$inferSelect
 export type Dispute = typeof disputes.$inferSelect
