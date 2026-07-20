@@ -15,6 +15,13 @@
       "when": 1784493063455,
       "tag": "0001_useful_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784528214391,
+      "tag": "0002_amused_tony_stark",
+      "breakpoints": true
     }
   ]
 }
