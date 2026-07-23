@@ -1,6 +1,6 @@
 // Platform fee taken out of every payout to a seller. Configurable via env
 // so it can change without a code deploy; defaults to 5% if unset.
-const FEE_PERCENT = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '5')
+const FEE_PERCENT = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '1.5')
 
 // How long after a transaction completes before the payout actually fires.
 // Kept at 48h deliberately: Vercel's Hobby-tier cron only runs once a day,
