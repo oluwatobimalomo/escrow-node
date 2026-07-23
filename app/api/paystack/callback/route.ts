@@ -4,6 +4,7 @@ import { transactions } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { markFundedFromVerifiedPayment } from '@/app/actions/transactions'
 import { verifyPaystackTransaction } from '@/lib/paystack'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 // This route only runs when the buyer's browser is redirected back from
 // Paystack's checkout page. It is a UX shortcut (skip straight to a "funded"
@@ -11,6 +12,12 @@ import { verifyPaystackTransaction } from '@/lib/paystack'
 // authoritative source of truth, since this redirect can be skipped
 // entirely (closed tab, browser crash, etc.).
 export async function GET(request: Request) {
+  try {
+    await enforceRateLimit('system')
+  } catch {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
   const url = new URL(request.url)
   const reference = url.searchParams.get('reference') ?? url.searchParams.get('trxref')
 

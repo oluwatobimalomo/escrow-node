@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { transactions, payoutAccounts, user } from '@/lib/db/schema'
 import { initiateTransfer } from '@/lib/paystack'
 import { sendEmail } from '@/lib/email'
+import { notifyPayoutSent } from '@/lib/notify'
 import { and, eq, isNotNull, lte } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 
@@ -86,6 +87,7 @@ export async function GET(request: Request) {
           updatedAt: new Date(),
         })
         .where(eq(transactions.id, tx.id))
+      await notifyPayoutSent({ ...tx, payoutStatus: 'paid' })
       results.push({ transactionId: tx.id, outcome: 'paid' })
     } catch (err) {
       console.error(`Payout failed for transaction ${tx.id}:`, err)

@@ -12,6 +12,17 @@ import {
 import { generateTransactionCode } from '@/lib/escrow'
 import { initializePaystackTransaction } from '@/lib/paystack'
 import { calculatePayout, payoutScheduledFor } from '@/lib/payout'
+import { enforceRateLimit } from '@/lib/rate-limit'
+import {
+  notifyTransactionInvited,
+  notifyTransactionAccepted,
+  notifyTransactionFunded,
+  notifyTransactionShipped,
+  notifyTransactionCompleted,
+  notifyTransactionCancelled,
+  notifyDisputeRaised,
+  notifyDisputeResolved,
+} from '@/lib/notify'
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -161,6 +172,7 @@ export async function createTransaction(input: {
   counterpartyEmail: string
 }) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const title = input.title.trim()
   const counterpartyEmail = input.counterpartyEmail.trim().toLowerCase()
 
@@ -188,12 +200,15 @@ export async function createTransaction(input: {
     status: 'awaiting_acceptance',
   })
   await logEvent(id, me.id, 'created', `Created as ${input.role}`)
+  const [newTx] = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1)
+  if (newTx) await notifyTransactionInvited(newTx)
   revalidatePath('/dashboard')
   return { id }
 }
 
 export async function acceptTransaction(id: string) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const [tx] = await db
     .select()
     .from(transactions)
@@ -217,12 +232,15 @@ export async function acceptTransaction(id: string) {
     })
     .where(eq(transactions.id, id))
   await logEvent(id, me.id, 'accepted', 'Terms accepted by counterparty')
+  const [updatedTx] = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1)
+  if (updatedTx) await notifyTransactionAccepted(updatedTx, me.id)
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }
 
 export async function cancelTransaction(id: string) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const [tx] = await db
     .select()
     .from(transactions)
@@ -237,12 +255,14 @@ export async function cancelTransaction(id: string) {
     .set({ status: 'cancelled', updatedAt: new Date() })
     .where(eq(transactions.id, id))
   await logEvent(id, me.id, 'cancelled')
+  await notifyTransactionCancelled(tx, me.id)
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }
 
 export async function initiateFunding(id: string, email: string) {
   const me = await getSessionUser()
+  await enforceRateLimit('money', me.id)
   const trimmedEmail = email.trim().toLowerCase()
   if (!trimmedEmail || !trimmedEmail.includes('@')) {
     throw new Error('A valid email is required for the payment receipt')
@@ -310,6 +330,7 @@ export async function markFundedFromVerifiedPayment(reference: string) {
     .set({ status: 'funded', fundedAt: new Date(), updatedAt: new Date() })
     .where(eq(transactions.id, tx.id))
   await logEvent(tx.id, null, 'funded', 'Funds secured in escrow via Paystack')
+  await notifyTransactionFunded(tx)
   revalidatePath(`/dashboard/transactions/${tx.id}`)
   revalidatePath('/dashboard')
   return tx
@@ -317,6 +338,7 @@ export async function markFundedFromVerifiedPayment(reference: string) {
 
 export async function markShipped(id: string, note?: string) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const [tx] = await db
     .select()
     .from(transactions)
@@ -340,12 +362,14 @@ export async function markShipped(id: string, note?: string) {
     })
     .where(eq(transactions.id, id))
   await logEvent(id, me.id, 'shipped', note?.trim() || undefined)
+  await notifyTransactionShipped({ ...tx, status: 'shipped' }, me.id)
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }
 
 export async function confirmDelivery(id: string) {
   const me = await getSessionUser()
+  await enforceRateLimit('money', me.id)
   const [tx] = await db
     .select()
     .from(transactions)
@@ -381,6 +405,10 @@ export async function confirmDelivery(id: string) {
     'released',
     `Escrow released — payout of ${payoutAmount} scheduled after the cooling-off window`,
   )
+  await notifyTransactionCompleted(
+    { ...tx, status: 'completed', payoutAmount: String(payoutAmount) },
+    me.id,
+  )
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }
@@ -393,6 +421,7 @@ export async function raiseDispute(
   details?: string,
 ) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const [tx] = await db
     .select()
     .from(transactions)
@@ -415,6 +444,7 @@ export async function raiseDispute(
     .set({ status: 'disputed', updatedAt: new Date() })
     .where(eq(transactions.id, id))
   await logEvent(id, me.id, 'disputed', reason.trim())
+  await notifyDisputeRaised({ ...tx, status: 'disputed' }, me.id, reason.trim())
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }
@@ -424,6 +454,7 @@ export async function resolveDispute(
   outcome: 'release' | 'refund',
 ) {
   const me = await getSessionUser()
+  await enforceRateLimit('money', me.id)
   const [tx] = await db
     .select()
     .from(transactions)
@@ -475,6 +506,12 @@ export async function resolveDispute(
       ? 'Dispute settled — funds released to seller'
       : 'Dispute settled — funds refunded to buyer',
   )
+  await notifyDisputeResolved(
+    { ...tx, status: outcome === 'release' ? 'completed' : 'refunded' },
+    me.id,
+    outcome,
+    false,
+  )
   revalidatePath(`/dashboard/transactions/${transactionId}`)
   revalidatePath('/dashboard')
 }
@@ -487,6 +524,7 @@ export async function submitReview(
   comment?: string,
 ) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const [tx] = await db
     .select()
     .from(transactions)

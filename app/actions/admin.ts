@@ -5,6 +5,8 @@ import { db } from '@/lib/db'
 import { transactions, disputes, user, transactionEvents } from '@/lib/db/schema'
 import { refundPaystackTransaction } from '@/lib/paystack'
 import { calculatePayout, payoutScheduledFor } from '@/lib/payout'
+import { enforceRateLimit } from '@/lib/rate-limit'
+import { notifyDisputeResolved } from '@/lib/notify'
 import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -90,6 +92,7 @@ export async function adminResolveDispute(
   options: { splitToBuyerNaira?: number; note?: string } = {},
 ) {
   const admin = await requireAdmin()
+  await enforceRateLimit('money', admin.id)
 
   const [dispute] = await db
     .select()
@@ -195,6 +198,12 @@ export async function adminResolveDispute(
         ? 'Admin force-resolved dispute — full refund issued to buyer'
         : `Admin force-resolved dispute — split: ₦${refundAmount} refunded to buyer, ₦${sellerPayoutAmount} payout scheduled for seller`
   await logEvent(tx.id, admin.id, 'dispute_resolved', summary)
+  await notifyDisputeResolved(
+    { ...tx, status: outcome === 'release' ? 'completed' : 'refunded' },
+    null,
+    outcome,
+    true,
+  )
 
   revalidatePath('/admin/disputes')
   revalidatePath(`/dashboard/transactions/${tx.id}`)

@@ -12,6 +12,7 @@ import {
 import { and, avg, count, desc, eq, or } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 async function getSessionUser() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -93,6 +94,7 @@ export async function updateProfile(input: {
   image?: string
 }) {
   const me = await getSessionUser()
+  await enforceRateLimit('general', me.id)
   const name = input.name.trim()
   if (!name) throw new Error('Name cannot be empty')
   if (name.length > 100) throw new Error('Name is too long')

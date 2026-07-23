@@ -6,12 +6,19 @@ import {
   verifyPaystackTransaction,
   verifyPaystackWebhookSignature,
 } from '@/lib/paystack'
+import { enforceRateLimit } from '@/lib/rate-limit'
 
 // Paystack webhooks are the source of truth for funding a transaction — the
 // browser callback (see /api/paystack/callback) is only a UX convenience
 // for redirecting the user back, since a user can close the tab before the
 // redirect ever fires.
 export async function POST(request: Request) {
+  try {
+    await enforceRateLimit('system')
+  } catch {
+    return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
+  }
+
   const rawBody = await request.text()
   const signature = request.headers.get('x-paystack-signature')
 

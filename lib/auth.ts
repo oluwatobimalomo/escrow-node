@@ -22,6 +22,25 @@ function resolveDomain() {
 
 export const auth = betterAuth({
   database: pool,
+  // Better Auth's rate limiter is disabled in development by default and
+  // uses in-memory storage by default, which doesn't work across separate
+  // serverless invocations — "database" persists it in the existing
+  // Postgres instance instead, so it actually holds up on Vercel. The
+  // default 60s/100req is generous global cover; the custom rules below
+  // tighten the endpoints that matter most for brute-forcing.
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    storage: 'database',
+    customRules: {
+      '/sign-in/email': { window: 60, max: 5 },
+      '/sign-up/email': { window: 60, max: 5 },
+      '/siwe/verify': { window: 60, max: 5 },
+      '/forget-password': { window: 60, max: 3 },
+      '/send-verification-email': { window: 60, max: 3 },
+    },
+  },
   baseURL:
     process.env.BETTER_AUTH_URL ??
     (process.env.VERCEL_PROJECT_PRODUCTION_URL

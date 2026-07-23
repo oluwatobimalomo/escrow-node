@@ -8,6 +8,7 @@ import {
   resolveBankAccount,
   createTransferRecipient,
 } from '@/lib/paystack'
+import { enforceRateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -40,7 +41,8 @@ export async function getMyPayoutAccount() {
  * you: JOHN A DOE" before committing.
  */
 export async function verifyBankAccount(accountNumber: string, bankCode: string) {
-  await getSessionUser()
+  const me = await getSessionUser()
+  await enforceRateLimit('money', me.id)
   if (!/^\d{10}$/.test(accountNumber)) {
     throw new Error('Account number should be 10 digits')
   }
@@ -53,6 +55,7 @@ export async function savePayoutAccount(
   bankName: string,
 ) {
   const me = await getSessionUser()
+  await enforceRateLimit('money', me.id)
 
   // Re-resolve server-side rather than trusting whatever the client
   // displayed after verifyBankAccount — the two calls are seconds apart at
