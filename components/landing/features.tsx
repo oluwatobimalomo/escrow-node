@@ -1,4 +1,4 @@
-import { Lock, Scale, Smartphone, Star } from 'lucide-react'
+import { Lock, Layers, Scale, Star } from 'lucide-react'
 
 const features = [
   {
@@ -20,10 +20,10 @@ const features = [
       'Every completed transaction earns a rating. See who you\u2019re dealing with before you commit a single naira.',
   },
   {
-    icon: Smartphone,
-    title: 'Made for how Nigeria trades',
+    icon: Layers,
+    title: 'Built for how Nigeria and Africa trade',
     description:
-      'Works on any phone, priced in naira, and designed for Instagram vendors, marketplace sellers, and everyday buyers.',
+      'Physical goods, freelance and digital services, or SME-to-SME supply deals \u2014 one escrow flow covers all of them, priced in naira and usable on any phone.',
   },
 ]
 

@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { getFeeTier } from '@/lib/payout'
+import { formatNaira } from '@/lib/escrow'
 import { ShoppingBag, Store } from 'lucide-react'
 
 export function NewTransactionForm() {
@@ -113,6 +115,21 @@ export function NewTransactionForm() {
             required
             placeholder="250000"
           />
+          {role === 'seller' && Number.parseFloat(amount) > 0 && (
+            <p className="text-xs text-muted-foreground">
+              You&apos;d receive{' '}
+              {formatNaira(
+                Number.parseFloat(amount) *
+                  (1 - getFeeTier(Number.parseFloat(amount)).percent / 100),
+              )}{' '}
+              after the {getFeeTier(Number.parseFloat(amount)).percent}%
+              platform fee, 48 hours after delivery is confirmed.{' '}
+              <a href="/pricing" target="_blank" className="underline underline-offset-4">
+                Full pricing
+              </a>
+              .
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

@@ -5,7 +5,7 @@ const steps = [
     icon: FileCheck,
     title: 'Agree on terms',
     description:
-      'Buyer or seller creates a transaction with the item, price, and the other party\u2019s email. Both sides accept before anything moves.',
+      'Buyer or seller creates a transaction with what\u2019s being exchanged, the price, and the other party\u2019s email. Both sides accept before anything moves.',
   },
   {
     icon: Wallet,
@@ -15,15 +15,15 @@ const steps = [
   },
   {
     icon: PackageCheck,
-    title: 'Seller ships',
+    title: 'Seller delivers',
     description:
-      'With payment guaranteed, the seller dispatches the item and adds delivery details for the buyer to track.',
+      'With payment guaranteed, the seller ships the item, completes the work, or delivers the service \u2014 whatever was agreed.',
   },
   {
     icon: HandCoins,
     title: 'Funds released',
     description:
-      'The buyer confirms delivery and the funds are instantly released to the seller. Disagreement? Open a dispute \u2014 funds stay locked until it\u2019s resolved.',
+      'The buyer confirms delivery and the payout to the seller is scheduled, arriving after a short review window. Disagreement? Open a dispute \u2014 funds stay locked until it\u2019s resolved.',
   },
 ]
 

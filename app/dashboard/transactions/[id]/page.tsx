@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { TransactionActions } from '@/components/dashboard/transaction-actions'
+import { getFeeTier } from '@/lib/payout'
 import { ArrowLeft, Star } from 'lucide-react'
 
 const EVENT_LABELS: Record<string, string> = {
@@ -76,6 +77,45 @@ export default async function TransactionPage({
             {STATUS_DESCRIPTIONS[tx.status as TransactionStatus]}
           </p>
         </div>
+
+        {myRole === 'seller' && (
+          <div className="mt-4 rounded-lg border border-border bg-secondary/30 p-3 text-sm">
+            {tx.payoutAmount ? (
+              <div className="flex flex-col gap-1">
+                <p className="text-foreground">
+                  You&apos;ll receive{' '}
+                  <span className="font-medium">{formatNaira(tx.payoutAmount)}</span>{' '}
+                  after a {formatNaira(tx.platformFeeAmount ?? 0)} platform fee.
+                </p>
+                <p className="text-muted-foreground">
+                  {tx.payoutStatus === 'paid'
+                    ? `Paid out ${tx.payoutAt ? new Date(tx.payoutAt).toLocaleString() : ''}`
+                    : tx.payoutStatus === 'blocked_no_bank_details'
+                      ? 'Payout is ready but waiting on your bank details — add them in your profile.'
+                      : tx.payoutScheduledAt
+                        ? `Scheduled for ${new Date(tx.payoutScheduledAt).toLocaleString()} (48h after delivery is confirmed)`
+                        : ''}
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                At the current transaction amount, you&apos;ll receive{' '}
+                <span className="font-medium text-foreground">
+                  {formatNaira(
+                    Number.parseFloat(tx.amount) *
+                      (1 - getFeeTier(Number.parseFloat(tx.amount)).percent / 100),
+                  )}
+                </span>{' '}
+                ({getFeeTier(Number.parseFloat(tx.amount)).percent}% platform
+                fee), paid out 48 hours after the buyer confirms delivery.{' '}
+                <Link href="/pricing" className="underline underline-offset-4">
+                  See full pricing
+                </Link>
+                .
+              </p>
+            )}
+          </div>
+        )}
 
         <Separator className="my-5" />
 

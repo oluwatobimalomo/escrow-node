@@ -15,9 +15,10 @@ export function Hero() {
           Buy and sell online without the fear of fraud
         </h1>
         <p className="max-w-md text-lg leading-relaxed text-muted-foreground text-pretty">
-          TrustLock holds the buyer&apos;s payment in secure escrow and only
-          releases it to the seller when delivery is confirmed. No more
-          &ldquo;pay before delivery&rdquo; scams.
+          TrustLock holds a buyer&apos;s payment in secure escrow and only
+          releases it when the agreed conditions are met — whether
+          that&apos;s a delivered product, a completed freelance job, or a
+          B2B supply order. No more &ldquo;pay before delivery&rdquo; scams.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button render={<Link href="/sign-up" />} size="lg">
@@ -35,6 +36,18 @@ export function Hero() {
         <p className="text-sm text-muted-foreground">
           Free to try. No card required to create an account.
         </p>
+        <div className="flex flex-wrap gap-2">
+          {['Physical goods', 'Freelance & digital services', 'SME B2B trade'].map(
+            (use) => (
+              <span
+                key={use}
+                className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground"
+              >
+                {use}
+              </span>
+            ),
+          )}
+        </div>
       </div>
 
       {/* Mock escrow transaction card */}

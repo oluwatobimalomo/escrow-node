@@ -29,6 +29,14 @@ export function CtaFooter() {
             </span>
             <span className="font-medium text-foreground">TrustLock</span>
           </div>
+          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link href="/pricing" className="hover:text-foreground">
+              Pricing
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+          </nav>
           <p className="text-sm text-muted-foreground">
             Secure escrow for Nigerian commerce.
           </p>

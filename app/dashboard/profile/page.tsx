@@ -4,6 +4,7 @@ import { ProfileForm } from '@/components/dashboard/profile-form'
 import { ChangePasswordForm } from '@/components/dashboard/change-password-form'
 import { ReputationSummary } from '@/components/dashboard/reputation-summary'
 import { PayoutAccountForm } from '@/components/dashboard/payout-account-form'
+import { BvnVerificationForm } from '@/components/dashboard/bvn-verification-form'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
@@ -42,6 +43,7 @@ export default async function ProfilePage() {
         reviewCount={profile.reviewCount}
         completedCount={profile.completedCount}
         emailVerified={profile.emailVerified}
+        bvnVerified={profile.bvnVerified}
         walletLinked={profile.wallets.length > 0}
         recentReviews={profile.recentReviews}
       />
@@ -83,6 +85,17 @@ export default async function ProfilePage() {
             ))}
           </ul>
         )}
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-lg font-medium text-foreground mb-4">
+          Identity verification
+        </h2>
+        <BvnVerificationForm
+          verified={profile.bvnVerified}
+          verifiedName={profile.bvnVerifiedName}
+          verifiedAt={profile.bvnVerifiedAt}
+        />
       </Card>
 
       <Card className="p-5">

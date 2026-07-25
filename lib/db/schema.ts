@@ -24,6 +24,14 @@ export const user = pgTable('user', {
   banned: boolean('banned').default(false),
   banReason: text('banReason'),
   banExpires: timestamp('banExpires'),
+  // BVN-based KYC verification. Deliberately does NOT store the BVN itself
+  // — only whether it was successfully verified, when, and the matched
+  // name (for admin/dispute reference). Storing raw BVNs is exactly the
+  // kind of sensitive PII NDPR data-minimization principles say to avoid
+  // holding onto once you've used it for its one-time purpose.
+  bvnVerified: boolean('bvnVerified').notNull().default(false),
+  bvnVerifiedAt: timestamp('bvnVerifiedAt'),
+  bvnVerifiedName: text('bvnVerifiedName'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })

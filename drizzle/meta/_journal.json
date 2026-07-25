@@ -29,6 +29,13 @@
       "when": 1784549495210,
       "tag": "0003_glossy_starhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784943541626,
+      "tag": "0004_zippy_synch",
+      "breakpoints": true
     }
   ]
 }

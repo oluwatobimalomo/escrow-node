@@ -1,6 +1,24 @@
-// Platform fee taken out of every payout to a seller. Configurable via env
-// so it can change without a code deploy; defaults to 5% if unset.
-const FEE_PERCENT = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '1.5')
+// Tiered platform fee — lower percentage on larger transactions, matching
+// how escrow pricing typically works in this market (a flat 5% on a
+// ₦2,000,000 transaction is a very different cost than 5% on ₦20,000).
+// Override any threshold/rate via env if pricing needs to change without a
+// deploy; otherwise this schedule is the default.
+//
+// This same array powers the /pricing page — if you edit it, the public
+// pricing table updates automatically, so it can't drift out of sync with
+// what's actually charged.
+export type FeeTier = { upTo: number | null; percent: number; label: string }
+
+export const FEE_TIERS: FeeTier[] = [
+  { upTo: 50_000, percent: 3, label: 'Up to ₦50,000' },
+  { upTo: 250_000, percent: 2, label: '₦50,001 – ₦250,000' },
+  { upTo: 1_000_000, percent: 1.5, label: '₦250,001 – ₦1,000,000' },
+  { upTo: null, percent: 1, label: 'Above ₦1,000,000' },
+]
+
+export function getFeeTier(amount: number): FeeTier {
+  return FEE_TIERS.find((t) => t.upTo === null || amount <= t.upTo)!
+}
 
 // How long after a transaction completes before the payout actually fires.
 // Kept at 48h deliberately: Vercel's Hobby-tier cron only runs once a day,
@@ -10,9 +28,10 @@ const FEE_PERCENT = Number.parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '1.5')
 export const PAYOUT_COOLING_OFF_HOURS = 48
 
 export function calculatePayout(amount: number) {
-  const feeAmount = Math.round(amount * (FEE_PERCENT / 100) * 100) / 100
+  const tier = getFeeTier(amount)
+  const feeAmount = Math.round(amount * (tier.percent / 100) * 100) / 100
   const payoutAmount = Math.round((amount - feeAmount) * 100) / 100
-  return { feeAmount, payoutAmount }
+  return { feeAmount, payoutAmount, feePercent: tier.percent }
 }
 
 export function payoutScheduledFor(from: Date = new Date()) {

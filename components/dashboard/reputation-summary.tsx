@@ -7,6 +7,7 @@ export function ReputationSummary({
   reviewCount,
   completedCount,
   emailVerified,
+  bvnVerified,
   walletLinked,
   recentReviews,
 }: {
@@ -14,6 +15,7 @@ export function ReputationSummary({
   reviewCount: number
   completedCount: number
   emailVerified: boolean
+  bvnVerified: boolean
   walletLinked: boolean
   recentReviews: {
     id: number
@@ -25,7 +27,7 @@ export function ReputationSummary({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Card className="p-3 text-center">
           <p className="flex items-center justify-center gap-1 text-lg font-semibold text-foreground">
             <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
@@ -46,6 +48,15 @@ export function ReputationSummary({
             </Badge>
           ) : (
             <span className="text-xs text-muted-foreground">Email not verified</span>
+          )}
+        </Card>
+        <Card className="p-3 flex flex-col items-center justify-center gap-1">
+          {bvnVerified ? (
+            <Badge className="gap-1">
+              <BadgeCheck className="size-3" aria-hidden="true" /> ID verified
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">ID not verified</span>
           )}
         </Card>
         <Card className="p-3 flex flex-col items-center justify-center gap-1">

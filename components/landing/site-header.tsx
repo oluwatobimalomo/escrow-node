@@ -28,6 +28,12 @@ export function SiteHeader({ isAuthed }: { isAuthed: boolean }) {
           >
             Features
           </a>
+          <Link
+            href="/pricing"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Pricing
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">

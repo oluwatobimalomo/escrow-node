@@ -127,6 +127,7 @@ export async function getPublicProfile(userId: string) {
       image: user.image,
       bio: user.bio,
       emailVerified: user.emailVerified,
+      bvnVerified: user.bvnVerified,
       createdAt: user.createdAt,
     })
     .from(user)

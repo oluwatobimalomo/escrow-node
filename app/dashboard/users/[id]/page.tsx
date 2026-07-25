@@ -40,6 +40,7 @@ export default async function PublicProfilePage({
         reviewCount={profile.reviewCount}
         completedCount={profile.completedCount}
         emailVerified={profile.emailVerified}
+        bvnVerified={profile.bvnVerified}
         walletLinked={profile.walletLinked}
         recentReviews={profile.recentReviews}
       />

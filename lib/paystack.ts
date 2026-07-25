@@ -128,6 +128,36 @@ export async function refundPaystackTransaction(args: {
   return json.data
 }
 
+type PaystackBvnResponse = {
+  status: boolean
+  message: string
+  data: {
+    bvn: string
+    first_name: string
+    last_name: string
+    dob: string // "YYYY-MM-DD"
+    mobile: string
+  }
+}
+
+/**
+ * Resolves a Nigerian BVN to the name/DOB on file with the bank verification
+ * system — this is the KYC building block. ₦10 per call, 10 free per month
+ * on Paystack's side. Callers should NOT persist the raw BVN after this
+ * call returns; only the verification outcome (see updateKycStatus in
+ * app/actions/kyc.ts) should be stored.
+ */
+export async function resolveBvn(bvn: string): Promise<PaystackBvnResponse['data']> {
+  const res = await fetch(`${PAYSTACK_BASE_URL}/bank/resolve_bvn/${encodeURIComponent(bvn)}`, {
+    headers: { Authorization: `Bearer ${secretKey()}` },
+  })
+  const json = (await res.json()) as PaystackBvnResponse
+  if (!res.ok || !json.status) {
+    throw new Error(json.message || 'Could not verify that BVN — double check it')
+  }
+  return json.data
+}
+
 type PaystackBank = {
   name: string
   code: string
