@@ -1,9 +1,13 @@
 import { db } from '@/lib/db'
 import { user } from '@/lib/db/schema'
 import { desc } from 'drizzle-orm'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
 import { UserRoleTable } from '@/components/admin/user-role-table'
 
 export default async function AdminUsersPage() {
+  const session = await auth.api.getSession({ headers: await headers() })
+
   const users = await db
     .select({
       id: user.id,
@@ -24,10 +28,11 @@ export default async function AdminUsersPage() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {users.length} account{users.length === 1 ? '' : 's'}. Grant admin
-          carefully — admins can force-resolve disputes and issue refunds.
+          carefully — admins can force-resolve disputes, issue refunds, and
+          permanently delete accounts.
         </p>
       </div>
-      <UserRoleTable users={users} />
+      <UserRoleTable users={users} currentUserId={session!.user.id} />
     </div>
   )
 }
