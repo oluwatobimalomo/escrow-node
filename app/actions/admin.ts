@@ -209,3 +209,42 @@ export async function adminResolveDispute(
   revalidatePath(`/dashboard/transactions/${tx.id}`)
   revalidatePath('/dashboard')
 }
+
+// --- User Management --------------------------------------------------
+
+export async function adminCheckCanDeleteUser(userId: string) {
+  await requireAdmin()
+
+  const [targetUser] = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+
+  if (!targetUser) {
+    throw new Error('User not found')
+  }
+
+  if (targetUser.role === 'admin') {
+    return { 
+      canDelete: false, 
+      reason: 'Cannot delete an administrator account.' 
+    }
+  }
+
+  // Check if they are involved in an open dispute
+  const openDisputes = await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.status, 'disputed'))
+    .limit(1)
+
+  if (openDisputes.length > 0) {
+    return {
+      canDelete: false,
+      reason: 'User has active transactions or open disputes.'
+    }
+  }
+
+  return { canDelete: true, reason: 'Eligible for deletion.' }
+}
