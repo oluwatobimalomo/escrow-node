@@ -17,7 +17,6 @@ export function BvnVerificationForm({
   verifiedAt: Date | null
 }) {
   const [bvn, setBvn] = useState('')
-  const [dob, setDob] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [justVerified, setJustVerified] = useState<string | null>(null)
@@ -42,7 +41,7 @@ export function BvnVerificationForm({
     setError(null)
     setVerifying(true)
     try {
-      const result = await verifyBvnIdentity(bvn, dob)
+      const result = await verifyBvnIdentity(bvn)
       setJustVerified(result.verifiedName)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
@@ -55,8 +54,8 @@ export function BvnVerificationForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
         Optional, but verified accounts are more likely to be trusted by
-        counterparties. We check your BVN against your date of birth and
-        never store the BVN itself.
+        counterparties. We check your BVN and confirm the registered name
+        matches your account — we never store the BVN itself.
       </p>
       <div className="flex flex-col gap-2">
         <Label htmlFor="bvn">Bank Verification Number (BVN)</Label>
@@ -69,15 +68,6 @@ export function BvnVerificationForm({
           placeholder="11-digit BVN"
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="dob">Date of birth</Label>
-        <Input
-          id="dob"
-          type="date"
-          value={dob}
-          onChange={(e) => setDob(e.target.value)}
-        />
-      </div>
       {error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
@@ -86,7 +76,7 @@ export function BvnVerificationForm({
       <Button
         type="submit"
         className="w-fit"
-        disabled={verifying || bvn.length !== 11 || !dob}
+        disabled={verifying || bvn.length !== 11}
       >
         {verifying ? 'Verifying...' : 'Verify identity'}
       </Button>
