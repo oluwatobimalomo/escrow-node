@@ -1,179 +1,90 @@
-# Integration guide — account management, admin delete, duplicate-email fix
-
-Everything from this round and the previous "account management" round is
-in this one package. Apply it all together, in the order below.
-
-## 1. Extract
+# BVN verification via Dojah — how to apply this
 
 ```bash
 cd ~/Downloads/trustlock-decentralized
-unzip -o ~/Downloads/account-management-v2.zip -d .
+unzip -o ~/Downloads/bvn-dojah.zip -d .
 ```
 
-This places these new files directly (safe, no overwrite risk):
-- `app/forgot-password/page.tsx` + `components/forgot-password-form.tsx`
-- `app/reset-password/page.tsx` + `components/reset-password-form.tsx`
-- `app/actions/account-deletion.ts`
-- `components/dashboard/delete-account-section.tsx`
+This **replaces two existing files wholesale** (the unzip does this
+automatically since the paths match) and **adds one new file**:
 
-And these **replace existing files wholesale** (these are small enough
-that a full replacement is cleaner than a patch — the unzip does this
-automatically since the paths match):
-- `components/admin/user-role-table.tsx`
-- `app/admin/users/page.tsx`
+- `components/dashboard/bvn-verification-form.tsx` — replaced. Was
+  showing the "temporarily unavailable" notice; now the real interactive
+  form again. No other file needs to change to pick this up — the
+  profile page already renders this component with the right props from
+  when it was disabled.
+- `app/actions/kyc.ts` — replaced. Same function name and signature
+  (`verifyBvnIdentity`) as the old Paystack-based version, just calling
+  Dojah underneath instead.
+- `lib/dojah.ts` — new. The actual API client.
 
-Three files are reference-only — copy their contents into your existing
-files by hand, then you can delete them:
-- `lib/email-addition.ts` → copy both functions into your existing `lib/email.ts`
-- `lib/auth-edit.ts` → apply to `lib/auth.ts` (see step 2)
-- `app/actions/admin-delete-user-addition.ts` → copy the one function into your existing `app/actions/admin.ts`
+**No schema change, no migration.** This reuses the `bvnVerified` /
+`bvnVerifiedAt` / `bvnVerifiedName` columns already sitting in your `user`
+table from the original BVN round — they were never removed when the
+feature was disabled, just unused.
 
-## 2. Edit lib/auth.ts
+## Setup — required before this works at all
 
-Follow `lib/auth-edit.ts` exactly — it has the full new `emailAndPassword`
-block (which now includes password-reset AND the duplicate-signup email
-handling) and the new `user.deleteUser` block. This **replaces** your
-current `emailAndPassword` block wholesale rather than patching it —
-apply it once, cleanly.
+**1. Create a Dojah account** at dojah.io, then go to your dashboard →
+Settings → API Keys. You'll get an **App ID** and a **Secret Key**.
 
-## 3. Edit app/actions/admin.ts
+**2. Confirm one thing in your own dashboard before testing** — flagged
+directly in `lib/dojah.ts` too: Dojah's docs site was mid-restructure
+when this was built, so I couldn't fully pin down today's exact BVN
+lookup endpoint path with full certainty (everything else — the auth
+header format, the response shape, the sandbox test value below — is
+confirmed directly from their docs, just not that one path). Once you're
+signed in, your dashboard's own API reference shows copy-pasteable code
+with your exact endpoint filled in, under **Verify Individual →
+Government Data Lookup**. Compare that against the `DOJAH_BVN_PATH`
+constant at the top of `lib/dojah.ts` — if it's different, just edit that
+one constant, nothing else in the file needs to change.
 
-Open `app/actions/admin-delete-user-addition.ts` and paste its one
-function (`adminCheckCanDeleteUser`) into your existing `app/actions/admin.ts`,
-anywhere alongside the other exported functions. It reuses `requireAdmin()`,
-which already exists in that file — no new import needed for that part.
-You will need these two additional imports at the top if they're not
-already there:
-```ts
-import { or, notInArray } from 'drizzle-orm'
-```
-(`and`, `eq`, `transactions`, `db` should already be imported in this
-file from the existing dispute-resolution code.)
+**3. Add environment variables** — see `env-additions.txt` in this zip
+for the exact three to add, both locally (`.env.local`) and in Vercel
+(Settings → Environment Variables, same as every other key this
+session — and same reminder as always: check it's scoped to the right
+environment, since that's bitten this build more than once).
 
-## 4. Edit components/auth-form.tsx
-
-Add a "Forgot password?" link on the sign-in form. Find the Password
-field:
-```tsx
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                placeholder="At least 8 characters"
-              />
-            </div>
-```
-Add directly after its closing `</div>`:
-```tsx
-            {!isSignUp && (
-              <div className="flex justify-end -mt-2">
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            )}
-```
-`Link` is already imported in this file — no new import needed.
-
-## 5. Edit app/dashboard/profile/page.tsx
-
-Add the import:
-```ts
-import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
-```
-Add near the end of the page, after your other cards:
-```tsx
-      <DeleteAccountSection hasPassword={profile.hasPassword} />
-```
-
-## 6. Commit and push
-
+**4. Commit and push:**
 ```bash
 git add .
 git status
-git commit -m "Add forgot-password, self-service and admin account deletion, fix duplicate-signup email"
+git commit -m "Rebuild BVN verification against Dojah"
 git push
 ```
 
-No schema change this round, no new environment variables — nothing to
-migrate.
+## Testing — use Dojah's real documented sandbox value
 
----
+Dojah publishes a fixed test BVN for sandbox testing:
+```
+BVN: 22222222222
+```
+Use this against whatever test name/DOB your sandbox account returns for
+it (check your Dojah dashboard's sandbox test data page — it may show a
+specific name/DOB pairing to use alongside this BVN, since the code here
+checks that the DOB you enter matches what Dojah returns). If the sandbox
+returns a different DOB than what you enter, you'll see the "date of
+birth doesn't match" error — that's the code working correctly, not a
+bug; just enter whatever DOB your sandbox dashboard shows for that test
+BVN.
 
-## What changed and why
+**What to check:**
+- Successful match → shows the green "Identity verified as [name]" badge
+  immediately, and that badge now also appears on the **public** profile
+  view (`/dashboard/users/[id]`), not just your own settings page — this
+  was already wired from the original BVN round, so it should just work.
+- Wrong DOB → clear error message, no false "verified" state.
+- Try it with `DOJAH_APP_ID`/`DOJAH_SECRET_KEY` deliberately unset once,
+  to confirm you get the clear "not set" error rather than a confusing
+  crash — worth knowing what that failure mode looks like before you
+  hit it by accident in production.
 
-### Forgot password
-Standard flow: request a link at `/forgot-password`, click it, land on
-`/reset-password` with a token, set a new password. Links expire in 1
-hour. Resetting a password also signs out any other active sessions on
-that account, as a security measure.
+## If the endpoint path from step 2 turns out different
 
-### Self-service account deletion
-A "Danger zone" card on the profile page. Password accounts confirm by
-re-entering their password; wallet-only accounts confirm by typing
-DELETE. Blocked automatically if the account has any transaction that
-isn't `completed`, `cancelled`, or `refunded` — money still in flight is
-a hard stop, not a warning.
-
-### Admin account deletion (this round, new)
-A "Delete" button next to each user on `/admin/users`, using Better
-Auth's admin-plugin `removeUser` — a genuine hard delete, distinct from
-the self-service one. Same active-transaction safety check applies here
-too, since an admin force-deleting a user mid-transaction is exactly as
-risky as the user doing it themselves. Also guards against an admin
-deleting their own account through this screen — Better Auth's
-`removeUser` doesn't prevent that on its own (a known, currently open
-issue in their GitHub repo), so the button is simply hidden on the
-admin's own row, and the safety-check function rejects it server-side too
-as a second layer.
-
-### Duplicate-signup email fix
-**The actual bug:** `requireEmailVerification: true` makes Better Auth
-deliberately return the same generic success response whether or not the
-email already has an account — this is intentional, OWASP-recommended
-behavior to stop an attacker from using your signup form to figure out
-who's registered on your platform. The bug was that *no real email was
-being sent at all* in the duplicate case, since the success response was
-synthetic. Someone retrying to sign up with their own existing email got
-told "check your email" and then nothing ever arrived.
-
-**The fix:** `onExistingUserSignUp` now sends a real, different email in
-that case — pointing the person at sign-in or password reset instead of
-a fake verification link. The on-screen message is unchanged (still the
-generic "check your email" text) by design, matching Better Auth's
-documented recommendation.
-
-**Worth knowing:** you'd originally asked for the on-screen message
-itself to say "an account already exists" directly. I kept it generic
-instead, because revealing that outright lets anyone probe your signup
-form to build a list of who has an account on TrustLock — a real privacy
-consideration for a platform handling people's money and transaction
-history. The concrete problem you hit (no email ever arriving) is fixed
-either way. If you still want the on-screen message to explicitly reveal
-"account already exists" after knowing that tradeoff, it's a small
-follow-up change — just say so.
-
-## Testing
-
-- **Forgot password:** request a reset for a real account, confirm the
-  email arrives, reset it, confirm the old password no longer works.
-- **Duplicate signup:** try signing up again with an email that already
-  has an account — confirm the on-screen message is the same generic
-  "check your email" text, and confirm a *real* email now arrives (the
-  "you already have an account" one, not a fake verification link).
-- **Self-service deletion, blocked case:** as a user with an active
-  transaction, try deleting — confirm it's blocked with a clear reason.
-- **Self-service deletion, allowed case:** a fresh test account with no
-  transactions — confirm it actually deletes and signs you out.
-- **Admin deletion:** on `/admin/users`, confirm your own row has no
-  Delete button, confirm deleting another test user works, and confirm
-  it's blocked the same way if that user has an active transaction.
+Update `DOJAH_BVN_PATH` in `lib/dojah.ts` and redeploy — that's the only
+change needed. If the response shape also turns out different (i.e. the
+field names aren't `entity.first_name` / `entity.last_name` /
+`entity.date_of_birth`), paste me what your dashboard's example response
+actually shows and I'll adjust `lookupBvn()` in a couple of lines — much
+faster to fix with the real response in hand than to keep guessing now.

@@ -1,0 +1,9 @@
+# Dojah (dojah.io -> sign up -> dashboard -> Settings -> API Keys).
+# Used for BVN-based identity verification on profiles.
+DOJAH_APP_ID=your-app-id-here
+DOJAH_SECRET_KEY=your-secret-key-here
+# Sandbox by default. Switch to your production host once you go live —
+# check your Dojah dashboard for the exact production URL, it's shown
+# alongside your live API keys once your account is approved for
+# production use.
+DOJAH_BASE_URL=https://sandbox.dojah.io
