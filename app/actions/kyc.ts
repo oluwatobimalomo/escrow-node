@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { user } from '@/lib/db/schema'
-import { lookupBvn } from '@/lib/dojah'
+import { checkBvnNameMatch } from '@/lib/dojah'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
@@ -15,41 +15,33 @@ async function getSessionUser() {
   return session.user
 }
 
-// Loose name comparison — BVN records are typically "SURNAME FIRSTNAME
-// MIDDLENAME" in caps, while account names are free-typed in any order
-// and case. Rather than require an exact match (which would fail almost
-// every real case), check that most of the words in one name appear
-// somewhere in the other.
-function namesLikelyMatch(accountName: string, bvnName: string): boolean {
-  const normalize = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z\s]/g, '')
-      .split(/\s+/)
-      .filter(Boolean)
-
-  const accountWords = normalize(accountName)
-  const bvnWords = new Set(normalize(bvnName))
-  if (accountWords.length === 0 || bvnWords.size === 0) return false
-
-  const matches = accountWords.filter((w) => bvnWords.has(w)).length
-  // Require at least half the account name's words to show up in the BVN
-  // name — tolerant of a missing middle name or minor formatting
-  // differences, while still catching a genuinely different person.
-  return matches / accountWords.length >= 0.5
+// Splits "First Middle Last" into (first_name, last_name) the way Dojah's
+// API expects two separate fields. Takes the first word as the first
+// name and everything else as the last name — an imperfect heuristic for
+// multi-part Nigerian names, but a reasonable default; there's no way to
+// know someone's intended first/last split from a single free-text name
+// field without asking them directly.
+function splitName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/)
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' ') || parts[0] || '',
+  }
 }
 
+// Confidence threshold below which we don't trust a "match" even if
+// Dojah's boolean status says true — status alone was observed to be
+// true even for a deliberately wrong sandbox test name (expected canned
+// sandbox behavior), so leaning on confidence_value too is a reasonable
+// extra guard once this runs against real data.
+const MIN_CONFIDENCE = 60
+
 /**
- * Verifies a BVN and checks the returned name against the account's own
- * name as a lightweight signal that the person submitting it actually
- * owns it. This is NOT equivalent to an OTP-based ownership check — a
- * BVN lookup alone only proves the number is real, not who's holding it.
- * Worth revisiting with a stronger provider-side ownership flow (OTP to
- * the phone number on file, etc.) if this needs to be more rigorous than
- * "reasonably discourages casual misuse."
- *
- * The raw BVN is never written to the database — only the boolean
- * outcome, timestamp, and matched name are persisted.
+ * Verifies a BVN by submitting the account's own name and checking
+ * Dojah's returned match status/confidence for each field — this API
+ * doesn't hand back a name to compare ourselves; it does the matching
+ * server-side. The raw BVN is never written to the database — only the
+ * boolean outcome and timestamp are persisted.
  */
 export async function verifyBvnIdentity(bvn: string) {
   const me = await getSessionUser()
@@ -59,16 +51,25 @@ export async function verifyBvnIdentity(bvn: string) {
     throw new Error('BVN should be 11 digits')
   }
 
-  const entity = await lookupBvn(bvn)
-  const fullName = `${entity.first_name ?? ''} ${entity.last_name ?? ''}`.trim()
-
-  if (!fullName) {
-    throw new Error('Could not confirm a name for this BVN — try again or contact support.')
+  const { firstName, lastName } = splitName(me.name)
+  if (!firstName || !lastName) {
+    throw new Error(
+      'Your account name needs both a first and last name before you can verify — update it above first.',
+    )
   }
 
-  if (!namesLikelyMatch(me.name, fullName)) {
+  const entity = await checkBvnNameMatch({ bvn, firstName, lastName })
+
+  const firstOk =
+    entity.first_name?.status === true &&
+    (entity.first_name.confidence_value ?? 0) >= MIN_CONFIDENCE
+  const lastOk =
+    entity.last_name?.status === true &&
+    (entity.last_name.confidence_value ?? 0) >= MIN_CONFIDENCE
+
+  if (!firstOk || !lastOk) {
     throw new Error(
-      `This BVN is registered to a different name (${fullName}) than your account (${me.name}). Make sure this is your own BVN, or update your account name to match.`,
+      `This BVN doesn't match the name on your account (${me.name}). Make sure this is your own BVN, or update your account name to match exactly.`,
     )
   }
 
@@ -77,11 +78,11 @@ export async function verifyBvnIdentity(bvn: string) {
     .set({
       bvnVerified: true,
       bvnVerifiedAt: new Date(),
-      bvnVerifiedName: fullName,
+      bvnVerifiedName: me.name,
       updatedAt: new Date(),
     })
     .where(eq(user.id, me.id))
 
   revalidatePath('/dashboard/profile')
-  return { verifiedName: fullName }
+  return { verifiedName: me.name }
 }
