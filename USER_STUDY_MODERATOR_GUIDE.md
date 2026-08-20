@@ -1,53 +1,31 @@
-# TrustLock User Study — Moderator Guide (v2)
+# TrustLock User Study — Moderator Guide
 
-This supersedes the **task list** in the original facilitator materials
-(Section 3). Recruitment, consent, screening questions, the SUS/Trust/
-Qualitative instruments, and the scoring guide are all **unchanged** — keep
-using those sections as written. Nothing about the questionnaire wording
-changes here.
+## 1. Before sessions start
 
-What changed since the original materials were written: the app now has a
-persistent sidebar (not a single top bar), a **marketplace** where sellers
-list items for others to browse and buy directly, and a few flows that were
-previously broken are now working (forgot password, in particular). The
-task list below reflects the app as it stands today and closes a gap in the
-original design — the questionnaire already asks participants to rate
-their trust in marketplace listings, but the old task list never had
-anyone actually use the marketplace. Fixed below.
+**Seed the marketplace.** Buyer-track participants need real listings to
+browse. Using a dedicated facilitator/test account, publish 2–3
+throwaway listings before your first session: `Marketplace` (sidebar) →
+`Sell something` → fill in title, price, quantity, an optional photo →
+`Publish listing`.
 
----
+**Prep wallet-track devices.** "Continue with wallet" requires a browser
+extension wallet — it does not work in a phone's regular browser
+(Safari/Chrome). Before each Track C or D session starts, confirm the
+participant has one of:
 
-## 1. Before sessions start: seed the marketplace, and prep wallet devices
+- A laptop/desktop with the MetaMask browser extension installed, or
+- A phone with the MetaMask app installed, opening the study URL from
+  inside MetaMask's own in-app browser (MetaMask app → Browser tab →
+  enter the URL), not their phone's regular browser.
 
-Buyer-track participants need real listings to browse — don't make the
-first buyer session depend on a seller session having already run.
+Have a facilitator laptop with MetaMask installed on hand as a fallback.
 
-Using a dedicated facilitator/test account (not a participant's), publish
-**2–3 throwaway listings** before your first session:
-`Marketplace` (sidebar) → `Sell something` → fill in title, price,
-quantity, an optional photo → `Publish listing`. Takes under a minute
-each.
-
-**For Tracks C and D (wallet):** "Continue with wallet" only works with
-a browser extension wallet — it does not work in a phone's regular
-browser (Safari/Chrome). Confirm before the session starts, not during
-it, that the participant has one of:
-
-- A **laptop/desktop** with the MetaMask browser extension already
-  installed, or
-- A **phone with the MetaMask app installed**, opening the study URL
-  from *inside MetaMask's own in-app browser* (MetaMask app → Browser
-  tab → enter the URL) rather than tapping a link that opens their
-  regular phone browser.
-
-If neither is set up in advance, have a facilitator laptop with MetaMask
-ready as a fallback so the session isn't derailed by wallet setup.
+**Recruitment, consent, and screening** questions are documented in the
+accompanying study materials — follow those as written.
 
 ## 2. The four tracks
 
-Assign each participant to one track. This crosses the two things the
-study already cares about — identity method, and role — into four
-conditions:
+Assign each participant to one track, crossing identity method and role:
 
 | Track | Identity method | Role |
 |---|---|---|
@@ -56,18 +34,14 @@ conditions:
 | C | Wallet (MetaMask) | Buyer |
 | D | Wallet (MetaMask) | Seller |
 
-Use a participant ID that encodes the track for later filtering, e.g.
-`P07-A`, `P08-C`. Aim for roughly even numbers across all four if your
-total sample allows it (with 15–25 participants, 4–6 per track is
-reasonable — don't force exact evenness at the cost of recruitment).
+Use a participant ID that encodes the track, e.g. `P07-A`, `P08-C`. Aim
+for 4–6 participants per track across a total sample of 15–25.
 
-Every participant gets the **same post-task questionnaire** regardless of
-track (Section 4 of the original materials, unchanged) — the task list is
-what differs, not the survey.
+Every participant completes the same post-task questionnaire (SUS,
+Trust, Qualitative — see the accompanying study materials) regardless of
+track. Only the task list differs.
 
 ## 3. Session script (read or paraphrase)
-
-Same as the original materials — reuse verbatim:
 
 > "Thanks for helping test TrustLock, an escrow platform for online buying
 > and selling. I'm going to ask you to complete a few tasks using a live
@@ -79,17 +53,13 @@ Same as the original materials — reuse verbatim:
 
 ## 4. Task lists by track
 
-All tracks start the same way (account creation), then diverge.
+All tracks start the same way, then diverge.
 
 ### Everyone: account creation
 
 - **Email tracks (A, B):** Sign up with email and password.
-- **Wallet tracks (C, D):** Use "Continue with wallet" instead, and
-  connect via MetaMask when prompted. Note for your own reference (no
-  need to mention it to the participant unless they ask): the account
-  still gets a system-generated placeholder value where an email would
-  go, visible read-only on the Profile page. That's expected, not a bug —
-  see the funding-step note under Track C for where it actually matters.
+- **Wallet tracks (C, D):** Use "Continue with wallet" and connect via
+  MetaMask.
 
 ### Track A — Email, Buyer
 
@@ -97,23 +67,18 @@ All tracks start the same way (account creation), then diverge.
    email you control, or the facilitator's).
 2. Switch to the counterparty account (or have the facilitator do this)
    and accept the transaction.
-3. Fund the transaction. **Use Transfer, not Card** — Paystack's Card
-   test mode has shown flaky "insufficient funds" declines during our
-   own testing even when the on-screen "Success" option was explicitly
-   selected, which would derail a session for no reason related to the
-   app. Transfer has been reliable in testing. If you want to
-   demonstrate Card anyway: test card `4084084084084081`, any future
-   expiry, CVV `408`, PIN `0000`, OTP `123456`, and explicitly select
-   **Success** before paying — but have participants fall back to
-   Transfer if it declines, rather than troubleshooting Paystack's
-   sandbox mid-session.
+3. Fund the transaction. Use Transfer as the payment method. If
+   demonstrating Card instead: test card `4084084084084081`, any future
+   expiry, CVV `408`, PIN `0000`, OTP `123456` — explicitly select
+   **Success** on the option shown before paying, and fall back to
+   Transfer if it declines.
 4. Before doing anything else, find and read the platform fee and
    expected payout timing for this transaction. Don't prompt where to
    look — this tests discoverability.
 5. Go to **Marketplace** in the sidebar, pick any listing, and buy it.
-   Notice that funding is the only step left — there's no separate
-   "accept" step, since the seller already committed to the price by
-   listing it.
+   There's no separate "accept" step here — the seller already
+   committed to the price by listing it, so funding is the only step
+   left.
 6. Raise a dispute on either transaction and look at what options are
    available to resolve it.
 7. Find another user's public profile and look at their reputation
@@ -126,34 +91,29 @@ All tracks start the same way (account creation), then diverge.
 1. Go to **Marketplace → Sell something**. Publish a listing: title,
    description, a photo, price, and quantity.
 2. Have the facilitator (or a second test account) buy that listing.
-   Notice you weren't asked to separately "accept" — funding is next.
+   There's no separate "accept" step — funding is next.
 3. Once funded, find it in **Dispatch products** and mark it shipped.
-4. Create a second transaction the old way — invite a counterparty by
-   email directly, rather than through a listing.
+4. Create a second transaction the direct way — invite a counterparty by
+   email, rather than through a listing.
 5. Go to **Payments** in the sidebar. Add payout/bank account details,
-   and look at what the payout history/ledger shows once a sale
-   completes.
+   and look at what the payout history shows once a sale completes.
 6. Find another user's public profile and look at their reputation.
 7. *(Optional)* Try "Forgot password?" from the sign-in page end to end.
 
 ### Track C — Wallet, Buyer
 
-Same as Track A, with one specific thing to watch for: wallet-only
-accounts get a system-generated placeholder value in place of an email.
-At the **"Fund escrow"** step, the "Email for receipt" field is
-pre-filled with that placeholder — watch whether the participant notices
-it's not a real address and replaces it before paying. If they don't
-notice, gently point it out rather than letting them submit a payment
-that has nowhere to send the receipt — this is a genuine discoverability
-question worth a note in your observations either way, not something to
-silently fix for them.
+Same as Track A. One specific thing to watch for: wallet-only accounts
+get a system-generated placeholder value where an email would go. At
+the "Fund escrow" step, the "Email for receipt" field is pre-filled with
+that placeholder — watch whether the participant notices it's not a
+real address and replaces it before paying. If they don't notice,
+gently point it out rather than letting them submit a payment with
+nowhere to send the receipt. Note this in your observations either way.
 
 ### Track D — Wallet, Seller
 
-Same as Track B. The placeholder-email note above doesn't apply here
-directly (sellers don't hit that dialog), but keep an eye out on the
-**Payments** page, where a payout account still requires real bank
-details regardless of identity method.
+Same as Track B. Keep an eye on the **Payments** page, where a payout
+account still requires real bank details regardless of identity method.
 
 ### All tracks, optional, time permitting
 
@@ -164,16 +124,15 @@ details regardless of identity method.
 
 ## 5. Post-task questionnaire
 
-Unchanged — administer Section 4 of the original materials exactly as
-written (SUS, Trust, Qualitative). Record the participant's track (A/B/C/D)
-alongside their responses so results can be split by identity method and
-by role during analysis.
+Administer the SUS, Trust, and Qualitative instruments exactly as
+written in the accompanying study materials. Record the participant's
+track (A/B/C/D) alongside their responses so results can be split by
+identity method and by role during analysis.
 
 ## 6. Scoring and write-up
 
-Unchanged — Section 5 and 6 of the original materials apply as written.
-One addition worth doing given the new track split: report SUS and trust
-means **both overall and broken out by track**, since a meaningful
-difference between email vs. wallet or buyer vs. seller conditions would
-be a real finding worth a sentence or two in the discussion, even if the
-sample per track is too small for statistical significance.
+Follow the scoring guide in the accompanying study materials. Report SUS
+and trust means both overall and broken out by track — a meaningful
+difference between email vs. wallet or buyer vs. seller conditions is
+worth noting in the discussion, even if the per-track sample is too
+small for statistical significance.
