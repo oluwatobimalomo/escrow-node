@@ -24,6 +24,11 @@ Create your account:
   browser, not your phone's regular browser. Your facilitator will help
   make sure this is set up before you start.
 
+Then, before moving on to your track's tasks: go to **Profile** and try
+"Verify identity" using this test ID number: `22222222222`. This is
+one of the things that sets TrustLock apart from other platforms, so
+please try it now rather than skipping it.
+
 Once your facilitator confirms your track, follow the matching list
 below.
 
@@ -74,8 +79,6 @@ Same steps as Track B.
 
 ## If there's time left
 
-- Under **Profile**, try "Verify identity" using this test ID number:
-  `22222222222`.
 - Notice that Profile won't let you save changes without a photo — try
   saving without one, then add one.
 

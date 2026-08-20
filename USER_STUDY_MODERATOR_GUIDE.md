@@ -69,6 +69,15 @@ All tracks start the same way, then diverge.
 - **Wallet tracks (C, D):** Use "Continue with wallet" and connect via
   MetaMask.
 
+### Everyone: identity verification (required)
+
+Under **Profile**, use "Verify identity" with the test BVN
+`22222222222`. This is one of the platform's stated differentiators
+from other escrow apps — every participant should actually use it
+before the transaction tasks, not just optionally at the end, so the
+trust-perception ratings reflect real exposure to it rather than a
+feature they may never have touched.
+
 ### Track A — Email, Buyer
 
 1. Create a transaction by inviting a counterparty (use a second test
@@ -125,8 +134,6 @@ account still requires real bank details regardless of identity method.
 
 ### All tracks, optional, time permitting
 
-- Try "Verify identity" under **Profile** with the test BVN
-  `22222222222`.
 - Under **Profile**, notice the profile photo is required to save
   changes — try saving without one first, then with one.
 
