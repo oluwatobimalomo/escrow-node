@@ -7,7 +7,7 @@ import { refundPaystackTransaction } from '@/lib/paystack'
 import { calculatePayout, payoutScheduledFor } from '@/lib/payout'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { notifyDisputeResolved } from '@/lib/notify'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, notInArray, or } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
@@ -212,8 +212,24 @@ export async function adminResolveDispute(
 
 // --- User Management --------------------------------------------------
 
+// Statuses where money has fully settled one way or another — safe states
+// to be in when deleting an account (mirrors app/actions/account-deletion.ts).
+const DELETE_TERMINAL_STATUSES = ['completed', 'cancelled', 'refunded']
+
+/**
+ * Same safety check as self-service account deletion, but for an admin
+ * deleting someone else's account. removeUser() from Better Auth's admin
+ * plugin is a hard delete with no awareness of in-flight transactions —
+ * this check runs first so an admin can't accidentally delete a user who's
+ * still a party to escrowed funds (which would orphan that money — see
+ * notes on transactions.buyerId/sellerId not being FK-enforced).
+ */
 export async function adminCheckCanDeleteUser(userId: string) {
-  await requireAdmin()
+  const admin = await requireAdmin()
+
+  if (userId === admin.id) {
+    return { canDelete: false, reason: 'You cannot delete your own account from here.' }
+  }
 
   const [targetUser] = await db
     .select()
@@ -226,25 +242,30 @@ export async function adminCheckCanDeleteUser(userId: string) {
   }
 
   if (targetUser.role === 'admin') {
-    return { 
-      canDelete: false, 
-      reason: 'Cannot delete an administrator account.' 
-    }
-  }
-
-  // Check if they are involved in an open dispute
-  const openDisputes = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.status, 'disputed'))
-    .limit(1)
-
-  if (openDisputes.length > 0) {
     return {
       canDelete: false,
-      reason: 'User has active transactions or open disputes.'
+      reason: 'Cannot delete an administrator account.',
     }
   }
 
-  return { canDelete: true, reason: 'Eligible for deletion.' }
+  // Check whether THIS user (not the platform at large) has any
+  // non-terminal transactions — funds or an obligation still in flight.
+  const active = await db
+    .select({ id: transactions.id, code: transactions.code })
+    .from(transactions)
+    .where(
+      and(
+        or(eq(transactions.buyerId, userId), eq(transactions.sellerId, userId)),
+        notInArray(transactions.status, DELETE_TERMINAL_STATUSES),
+      ),
+    )
+
+  if (active.length > 0) {
+    return {
+      canDelete: false,
+      reason: `This user has ${active.length} active transaction${active.length === 1 ? '' : 's'} (e.g. ${active[0].code}) that must be resolved first.`,
+    }
+  }
+
+  return { canDelete: true, reason: null }
 }

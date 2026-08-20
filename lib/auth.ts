@@ -3,7 +3,12 @@ import { siwe, admin } from 'better-auth/plugins'
 import { generateRandomString } from 'better-auth/crypto'
 import { verifyMessage } from 'viem'
 import { pool } from '@/lib/db'
-import { sendEmail, verificationEmailHtml } from '@/lib/email'
+import {
+  sendEmail,
+  verificationEmailHtml,
+  resetPasswordEmailHtml,
+  existingAccountEmailHtml,
+} from '@/lib/email'
 
 function resolveDomain() {
   const url =
@@ -55,6 +60,31 @@ export const auth = betterAuth({
     // clicked the verification link. Doesn't affect SIWE wallet sign-in —
     // this block only governs the email/password provider.
     requireEmailVerification: true,
+    // Invalidate existing sessions on a successful reset, so a stolen
+    // session can't outlive a password change.
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset your password — TrustLock',
+        html: resetPasswordEmailHtml(url),
+      })
+    },
+    // Fires when someone tries to sign up with an email that already has
+    // an account. Because requireEmailVerification is true, Better Auth
+    // deliberately returns the SAME generic success response either way
+    // (OWASP-style protection against using signup to probe which emails
+    // have accounts). What we control is what actually gets emailed: a
+    // real sign-up gets a verification link; an existing-account attempt
+    // gets pointed at sign-in / password reset instead. The on-screen
+    // message stays identical in both cases by design.
+    onExistingUserSignUp: async ({ user }) => {
+      await sendEmail({
+        to: user.email,
+        subject: 'Sign-up attempt on your TrustLock account',
+        html: existingAccountEmailHtml(),
+      })
+    },
   },
   emailVerification: {
     sendOnSignUp: true,
@@ -80,6 +110,17 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+  },
+  // Enables authClient.deleteUser() (used by DeleteAccountSection). The
+  // in-flight-transaction safety check happens in
+  // app/actions/account-deletion.ts BEFORE this ever runs — Better Auth's
+  // own deleteUser has no awareness of transactions/escrow state, it just
+  // hard-deletes the row (cascading to session/account/walletAddress/
+  // payoutAccounts via their FK onDelete rules).
+  user: {
+    deleteUser: {
+      enabled: true,
+    },
   },
   plugins: [
     admin({
