@@ -23,7 +23,13 @@ export default async function ProfilePage() {
             My profile
           </h1>
           <p className="text-sm text-muted-foreground">
-            Member since {new Date(profile.createdAt).toLocaleDateString()} ·{' '}
+            Member since{' '}
+            {new Date(profile.createdAt).toLocaleDateString('en-NG', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}{' '}
+            ·{' '}
             <Link
               href={`/dashboard/users/${profile.id}`}
               className="underline underline-offset-4 hover:text-foreground"

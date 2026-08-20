@@ -67,7 +67,12 @@ export function DisputeResolutionCard({
           </p>
         </div>
         <p className="text-xs text-muted-foreground whitespace-nowrap">
-          Raised {new Date(dispute.createdAt).toLocaleDateString()}
+          Raised{' '}
+          {new Date(dispute.createdAt).toLocaleDateString('en-NG', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })}
         </p>
       </div>
 

@@ -97,11 +97,11 @@ export default async function TransactionPage({
                 </p>
                 <p className="text-muted-foreground">
                   {tx.payoutStatus === 'paid'
-                    ? `Paid out ${tx.payoutAt ? new Date(tx.payoutAt).toLocaleString() : ''}`
+                    ? `Paid out ${tx.payoutAt ? new Date(tx.payoutAt).toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''}`
                     : tx.payoutStatus === 'blocked_no_bank_details'
                       ? 'Payout is ready but waiting on your bank details — add them in your profile.'
                       : tx.payoutScheduledAt
-                        ? `Scheduled for ${new Date(tx.payoutScheduledAt).toLocaleString()} (48h after delivery is confirmed)`
+                        ? `Scheduled for ${new Date(tx.payoutScheduledAt).toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })} (48h after delivery is confirmed)`
                         : ''}
                 </p>
               </div>

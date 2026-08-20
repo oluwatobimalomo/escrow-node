@@ -28,7 +28,15 @@ export function BvnVerificationForm({
         <span>
           Identity verified as <strong>{justVerified ?? verifiedName}</strong>
           {verifiedAt && !justVerified && (
-            <> on {new Date(verifiedAt).toLocaleDateString()}</>
+            <>
+              {' '}
+              on{' '}
+              {new Date(verifiedAt).toLocaleDateString('en-NG', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </>
           )}
           .
         </span>

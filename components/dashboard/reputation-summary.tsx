@@ -88,7 +88,11 @@ export function ReputationSummary({
                 <p className="mt-1 text-sm text-muted-foreground">{r.comment}</p>
               )}
               <p className="mt-1 text-xs text-muted-foreground">
-                {new Date(r.createdAt).toLocaleDateString()}
+                {new Date(r.createdAt).toLocaleDateString('en-NG', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
               </p>
             </Card>
           ))}

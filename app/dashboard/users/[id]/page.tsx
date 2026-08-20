@@ -24,7 +24,12 @@ export default async function PublicProfilePage({
             {profile.name}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Member since {new Date(profile.createdAt).toLocaleDateString()}
+            Member since{' '}
+            {new Date(profile.createdAt).toLocaleDateString('en-NG', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
           </p>
         </div>
       </div>
