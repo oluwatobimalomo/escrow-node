@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { user, transactions } from '@/lib/db/schema'
-import { sendEmail } from '@/lib/email'
+import { sendEmail, emailLogoHeader } from '@/lib/email'
 import { formatNaira } from '@/lib/escrow'
 import { eq, inArray } from 'drizzle-orm'
 
@@ -44,6 +44,7 @@ function shell(tx: TxRow, heading: string, bodyHtml: string) {
   const link = `${baseUrl()}/dashboard/transactions/${tx.id}`
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      ${emailLogoHeader()}
       <h2 style="color: #111;">${heading}</h2>
       ${productBlock(tx)}
       ${bodyHtml}

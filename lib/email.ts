@@ -58,9 +58,26 @@ export async function sendEmail(args: {
   }
 }
 
+/**
+ * Logo header shown at the top of every email. Uses a PNG rather than the
+ * app's SVG mark — email client SVG support is inconsistent (Outlook
+ * desktop in particular), so a raster image is the safe choice here. The
+ * file matches the app's actual brand mark (see public/trustlock-logo.svg,
+ * the source this was rendered from) rather than the generic icon.svg
+ * left over from the project template.
+ */
+export function emailLogoHeader() {
+  return `
+    <div style="text-align:center; margin-bottom: 20px;">
+      <img src="${baseUrl()}/trustlock-logo-email.png" alt="TrustLock" width="48" height="48" style="border-radius: 10px; display: inline-block;" />
+    </div>
+  `
+}
+
 export function verificationEmailHtml(url: string) {
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      ${emailLogoHeader()}
       <h2 style="color: #111;">Verify your email</h2>
       <p style="color: #444; line-height: 1.5;">
         Click the button below to verify your email address and activate your
@@ -86,6 +103,7 @@ export function verificationEmailHtml(url: string) {
 export function resetPasswordEmailHtml(url: string) {
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      ${emailLogoHeader()}
       <h2 style="color: #111;">Reset your password</h2>
       <p style="color: #444; line-height: 1.5;">
         Someone requested a password reset for your TrustLock account. If
@@ -113,6 +131,7 @@ export function resetPasswordEmailHtml(url: string) {
 export function accountDataExportEmailHtml() {
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      ${emailLogoHeader()}
       <h2 style="color: #111;">Your TrustLock data</h2>
       <p style="color: #444; line-height: 1.5;">
         As requested, your TrustLock account is being deleted. Attached is
@@ -141,6 +160,7 @@ export function existingAccountEmailHtml() {
   const url = baseUrl()
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      ${emailLogoHeader()}
       <h2 style="color: #111;">You already have a TrustLock account</h2>
       <p style="color: #444; line-height: 1.5;">
         Someone just tried to create a new account using this email
