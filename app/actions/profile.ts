@@ -91,7 +91,7 @@ export async function getMyProfile() {
 export async function updateProfile(input: {
   name: string
   bio?: string
-  image?: string
+  image: string
 }) {
   const me = await getSessionUser()
   await enforceRateLimit('general', me.id)
@@ -100,13 +100,20 @@ export async function updateProfile(input: {
   if (name.length > 100) throw new Error('Name is too long')
   if (input.bio && input.bio.length > 500)
     throw new Error('Bio must be 500 characters or fewer')
+  const image = input.image?.trim()
+  if (!image) throw new Error('A profile photo is required')
+  // Only trust URLs that actually came out of our own Blob store (see
+  // lib/blob-client.ts) — this is rendered directly as an <img src>
+  // across the app, so it isn't just a cosmetic check.
+  if (!/^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//.test(image))
+    throw new Error('Invalid profile photo')
 
   await db
     .update(user)
     .set({
       name,
       bio: input.bio?.trim() || null,
-      image: input.image?.trim() || null,
+      image,
       updatedAt: new Date(),
     })
     .where(eq(user.id, me.id))
