@@ -18,7 +18,11 @@ Create your account:
 
 - **If you're on an email track:** sign up with an email and password.
 - **If you're on a wallet track:** click "Continue with wallet" and
-  connect via MetaMask instead.
+  connect via MetaMask instead. This needs either a laptop with the
+  MetaMask browser extension, or a phone with the MetaMask app — if
+  using a phone, open this study from inside the MetaMask app's own
+  browser, not your phone's regular browser. Your facilitator will help
+  make sure this is set up before you start.
 
 Once your facilitator confirms your track, follow the matching list
 below.

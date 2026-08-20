@@ -17,7 +17,7 @@ anyone actually use the marketplace. Fixed below.
 
 ---
 
-## 1. Before sessions start: seed the marketplace
+## 1. Before sessions start: seed the marketplace, and prep wallet devices
 
 Buyer-track participants need real listings to browse — don't make the
 first buyer session depend on a seller session having already run.
@@ -27,6 +27,21 @@ Using a dedicated facilitator/test account (not a participant's), publish
 `Marketplace` (sidebar) → `Sell something` → fill in title, price,
 quantity, an optional photo → `Publish listing`. Takes under a minute
 each.
+
+**For Tracks C and D (wallet):** "Continue with wallet" only works with
+a browser extension wallet — it does not work in a phone's regular
+browser (Safari/Chrome). Confirm before the session starts, not during
+it, that the participant has one of:
+
+- A **laptop/desktop** with the MetaMask browser extension already
+  installed, or
+- A **phone with the MetaMask app installed**, opening the study URL
+  from *inside MetaMask's own in-app browser* (MetaMask app → Browser
+  tab → enter the URL) rather than tapping a link that opens their
+  regular phone browser.
+
+If neither is set up in advance, have a facilitator laptop with MetaMask
+ready as a fallback so the session isn't derailed by wallet setup.
 
 ## 2. The four tracks
 
