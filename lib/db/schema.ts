@@ -104,6 +104,11 @@ export const transactions = pgTable('transactions', {
   code: text('code').notNull().unique(),
   title: text('title').notNull(),
   description: text('description'),
+  // Product photo, uploaded to Vercel Blob at creation time (see
+  // lib/blob-client.ts / app/api/blob/upload). Shown on the transaction
+  // detail page and included in the funded/shipped/etc. notification
+  // emails so both parties can visually confirm what they're transacting.
+  image: text('image'),
   amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
   currency: text('currency').notNull().default('NGN'),
   buyerId: text('buyerId'),

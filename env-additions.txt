@@ -1,3 +1,10 @@
+# Vercel Blob (Storage tab in your Vercel project -> Create Database ->
+# Blob, or `vercel blob store add` via CLI). Used for profile avatars and
+# product photos (see lib/blob-client.ts / app/api/blob/upload).
+# In local dev, `vercel env pull` after creating the store will add this
+# automatically.
+BLOB_READ_WRITE_TOKEN=your-read-write-token-here
+
 # Dojah (dojah.io -> sign up -> dashboard -> Settings -> API Keys).
 # Used for BVN-based identity verification on profiles.
 DOJAH_APP_ID=your-app-id-here

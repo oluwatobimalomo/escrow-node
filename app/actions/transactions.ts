@@ -236,6 +236,7 @@ export async function getPayoutHistory() {
 export async function createTransaction(input: {
   title: string
   description?: string
+  image?: string
   amount: number
   role: 'buyer' | 'seller'
   counterpartyEmail: string
@@ -253,6 +254,12 @@ export async function createTransaction(input: {
     throw new Error('Enter a valid counterparty email')
   if (counterpartyEmail === me.email.toLowerCase())
     throw new Error('You cannot transact with yourself')
+  // Only trust URLs that actually came out of our own Blob store (see
+  // lib/blob-client.ts) — this is a plain text column with no other
+  // validation, and the value gets rendered directly as an <img src> on
+  // the transaction page and in notification emails.
+  if (input.image && !/^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//.test(input.image))
+    throw new Error('Invalid image')
 
   const id = randomUUID()
   await db.insert(transactions).values({
@@ -260,6 +267,7 @@ export async function createTransaction(input: {
     code: generateTransactionCode(),
     title,
     description: input.description?.trim() || null,
+    image: input.image || null,
     amount: input.amount.toFixed(2),
     buyerId: input.role === 'buyer' ? me.id : null,
     sellerId: input.role === 'seller' ? me.id : null,

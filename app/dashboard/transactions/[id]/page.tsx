@@ -65,6 +65,14 @@ export default async function TransactionPage({
         <StatusBadge status={tx.status} />
       </div>
 
+      {tx.image && (
+        <img
+          src={tx.image}
+          alt={tx.title}
+          className="mt-4 max-h-72 w-full rounded-xl border border-border object-cover"
+        />
+      )}
+
       <Card className="mt-6 gap-0 p-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

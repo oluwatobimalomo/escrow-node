@@ -44,21 +44,30 @@ export function TransactionListItem({
         href={`/dashboard/transactions/${tx.id}`}
         className="group flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40"
       >
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate font-medium text-card-foreground">
-              {tx.title}
+        <div className="flex min-w-0 items-center gap-3">
+          {tx.image && (
+            <img
+              src={tx.image}
+              alt=""
+              className="size-12 shrink-0 rounded-lg border border-border object-cover"
+            />
+          )}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate font-medium text-card-foreground">
+                {tx.title}
+              </p>
+              <StatusBadge status={tx.status} />
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {role} · <span className="font-mono">{tx.code}</span> ·{' '}
+              {new Date(tx.createdAt).toLocaleDateString('en-NG', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
             </p>
-            <StatusBadge status={tx.status} />
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {role} · <span className="font-mono">{tx.code}</span> ·{' '}
-            {new Date(tx.createdAt).toLocaleDateString('en-NG', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })}
-          </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <p className="font-mono font-semibold text-foreground">

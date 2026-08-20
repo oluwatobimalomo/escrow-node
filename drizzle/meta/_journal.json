@@ -43,6 +43,13 @@
       "when": 1787182384821,
       "tag": "0005_premium_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787188167291,
+      "tag": "0006_add_transaction_image",
+      "breakpoints": true
     }
   ]
 }

@@ -17,11 +17,35 @@ function baseUrl() {
   return url.startsWith('http') ? url : `https://${url}`
 }
 
-function shell(heading: string, bodyHtml: string, txId: string) {
-  const link = `${baseUrl()}/dashboard/transactions/${txId}`
+function productBlock(tx: TxRow) {
+  const imageHtml = tx.image
+    ? `<img src="${tx.image}" alt="${tx.title}" width="480" style="width:100%;max-width:480px;height:auto;max-height:280px;object-fit:cover;border-radius:8px;display:block;margin-bottom:16px;" />`
+    : ''
+  return `
+    ${imageHtml}
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Transaction</td>
+        <td style="padding:4px 0;color:#111;font-size:13px;text-align:right;font-family:monospace;">${tx.code}</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Item</td>
+        <td style="padding:4px 0;color:#111;font-size:13px;text-align:right;">${tx.title}</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Amount</td>
+        <td style="padding:4px 0;color:#111;font-size:13px;text-align:right;font-weight:600;">${formatNaira(tx.amount)}</td>
+      </tr>
+    </table>
+  `
+}
+
+function shell(tx: TxRow, heading: string, bodyHtml: string) {
+  const link = `${baseUrl()}/dashboard/transactions/${tx.id}`
   return `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
       <h2 style="color: #111;">${heading}</h2>
+      ${productBlock(tx)}
       ${bodyHtml}
       <p style="margin: 24px 0;">
         <a href="${link}"
@@ -80,9 +104,9 @@ export async function notifyTransactionInvited(tx: TxRow) {
     to: tx.counterpartyEmail!,
     subject: `You've been invited to a TrustLock transaction`,
     html: shell(
+      tx,
       `You're invited as the ${inviterRole}`,
       `<p style="color:#444;line-height:1.5;">Someone has invited you to "${tx.title}" for ${formatNaira(tx.amount)} on TrustLock. Sign in (or create an account with this email) to accept.</p>`,
-      tx.id,
     ),
   }).catch((err) => console.error('Invite email failed:', err))
 }
@@ -93,9 +117,9 @@ export async function notifyTransactionAccepted(tx: TxRow, actorId: string) {
     actorId,
     `Transaction accepted — ${tx.title}`,
     shell(
+      tx,
       'Terms accepted',
       `<p style="color:#444;line-height:1.5;">The other party accepted "${tx.title}". Next step: the buyer funds the escrow.</p>`,
-      tx.id,
     ),
   )
 }
@@ -106,9 +130,9 @@ export async function notifyTransactionFunded(tx: TxRow) {
     null,
     `Escrow funded — ${tx.title}`,
     shell(
+      tx,
       'Funds secured in escrow',
       `<p style="color:#444;line-height:1.5;">${formatNaira(tx.amount)} is now held in escrow for "${tx.title}". The seller can proceed with shipping/delivery.</p>`,
-      tx.id,
     ),
   )
 }
@@ -119,9 +143,9 @@ export async function notifyTransactionShipped(tx: TxRow, actorId: string) {
     actorId,
     `Marked as shipped — ${tx.title}`,
     shell(
+      tx,
       'Item marked as shipped',
       `<p style="color:#444;line-height:1.5;">The seller marked "${tx.title}" as shipped. Confirm delivery once you receive it to release the funds.</p>`,
-      tx.id,
     ),
   )
 }
@@ -132,9 +156,9 @@ export async function notifyTransactionCompleted(tx: TxRow, actorId: string) {
     actorId,
     `Delivery confirmed — ${tx.title}`,
     shell(
+      tx,
       'Delivery confirmed, funds released',
       `<p style="color:#444;line-height:1.5;">Delivery for "${tx.title}" was confirmed and the escrow has been released. Payout amount: ${tx.payoutAmount ? formatNaira(tx.payoutAmount) : formatNaira(tx.amount)}.</p>`,
-      tx.id,
     ),
   )
 }
@@ -145,9 +169,9 @@ export async function notifyTransactionCancelled(tx: TxRow, actorId: string) {
     actorId,
     `Transaction cancelled — ${tx.title}`,
     shell(
+      tx,
       'Transaction cancelled',
       `<p style="color:#444;line-height:1.5;">"${tx.title}" was cancelled before funding.</p>`,
-      tx.id,
     ),
   )
 }
@@ -158,9 +182,9 @@ export async function notifyDisputeRaised(tx: TxRow, actorId: string, reason: st
     actorId,
     `Dispute raised — ${tx.title}`,
     shell(
+      tx,
       'A dispute has been raised',
       `<p style="color:#444;line-height:1.5;">A dispute was raised on "${tx.title}": <em>${reason}</em>. Funds are on hold until it's resolved.</p>`,
-      tx.id,
     ),
   )
 }
@@ -182,9 +206,9 @@ export async function notifyDisputeResolved(
     actorId,
     `Dispute resolved — ${tx.title}`,
     shell(
+      tx,
       'Dispute resolved',
       `<p style="color:#444;line-height:1.5;">The dispute on "${tx.title}" was resolved${isAdminForced ? ' by an administrator' : ' by mutual agreement'}: ${outcomeText}.</p>`,
-      tx.id,
     ),
   )
 }
@@ -201,9 +225,9 @@ export async function notifyPayoutSent(tx: TxRow) {
     to: seller.email,
     subject: `Payout sent — ${tx.title}`,
     html: shell(
+      tx,
       'Payout sent',
       `<p style="color:#444;line-height:1.5;">${tx.payoutAmount ? formatNaira(tx.payoutAmount) : ''} has been sent to your bank account for "${tx.title}".</p>`,
-      tx.id,
     ),
   }).catch((err) => console.error('Payout notification failed:', err))
 }

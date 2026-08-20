@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from '@/lib/auth-client'
 import { createTransaction } from '@/app/actions/transactions'
+import { uploadImage, validateImageFile } from '@/lib/blob-client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,32 +13,60 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { getFeeTier } from '@/lib/payout'
 import { formatNaira } from '@/lib/escrow'
-import { ShoppingBag, Store } from 'lucide-react'
+import { ImagePlus, ShoppingBag, Store, X } from 'lucide-react'
 
 export function NewTransactionForm() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [counterpartyEmail, setCounterpartyEmail] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const handleImageSelect = (file: File | null) => {
+    setError(null)
+    if (!file) {
+      setImageFile(null)
+      setImagePreview(null)
+      return
+    }
+    const problem = validateImageFile(file)
+    if (problem) {
+      setError(problem)
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
     try {
+      let image: string | undefined
+      if (imageFile && session?.user?.id) {
+        setUploadingImage(true)
+        image = await uploadImage(imageFile, 'products', session.user.id)
+        setUploadingImage(false)
+      }
       const { id } = await createTransaction({
         title,
         description,
+        image,
         amount: Number.parseFloat(amount),
         role,
         counterpartyEmail,
       })
       router.push(`/dashboard/transactions/${id}`)
     } catch (err) {
+      setUploadingImage(false)
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setLoading(false)
     }
@@ -103,6 +133,49 @@ export function NewTransactionForm() {
         </div>
 
         <div className="flex flex-col gap-2">
+          <Label htmlFor="product-image">
+            Photo of the product{' '}
+            <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          {imagePreview ? (
+            <div className="relative w-fit">
+              <img
+                src={imagePreview}
+                alt="Product preview"
+                className="h-32 w-32 rounded-lg border border-border object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => handleImageSelect(null)}
+                className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-destructive text-white shadow-sm"
+                aria-label="Remove image"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          ) : (
+            <label
+              htmlFor="product-image"
+              className="flex h-32 w-32 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-muted-foreground hover:border-ring/40 hover:text-foreground"
+            >
+              <ImagePlus className="size-5" aria-hidden="true" />
+              <span className="text-xs">Add photo</span>
+            </label>
+          )}
+          <input
+            id="product-image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            onChange={(e) => handleImageSelect(e.target.files?.[0] ?? null)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Shown on the transaction page and included in the emails sent to
+            both parties. JPEG, PNG, WebP, or GIF, up to 5MB.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
           <Label htmlFor="amount">Amount (NGN)</Label>
           <Input
             id="amount"
@@ -157,7 +230,11 @@ export function NewTransactionForm() {
         )}
 
         <Button type="submit" disabled={loading} className="w-full">
-          {loading ? 'Creating...' : 'Create transaction'}
+          {uploadingImage
+            ? 'Uploading photo...'
+            : loading
+              ? 'Creating...'
+              : 'Create transaction'}
         </Button>
       </form>
     </Card>
