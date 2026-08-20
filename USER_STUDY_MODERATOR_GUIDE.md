@@ -20,8 +20,15 @@ participant has one of:
 
 Have a facilitator laptop with MetaMask installed on hand as a fallback.
 
-**Recruitment, consent, and screening** questions are documented in the
-accompanying study materials — follow those as written.
+**Recruitment and consent.** Target 15–25 participants — individual
+buyers/sellers, freelancers, and small-business operators who transact
+online at least occasionally; prior escrow experience isn't required.
+Personal contacts, community networks, or university networks are all
+reasonable recruitment pools for a formative study — document however
+you actually recruited, since reviewers ask about this. Before each
+session, confirm with the participant: no real money or personal
+financial data is used, responses are anonymous/aggregate, they can
+skip any question or stop at any time, and they're 18 or older.
 
 ## 2. The four tracks
 
@@ -37,8 +44,9 @@ Assign each participant to one track, crossing identity method and role:
 Use a participant ID that encodes the track, e.g. `P07-A`, `P08-C`. Aim
 for 4–6 participants per track across a total sample of 15–25.
 
-Every participant completes the same post-task questionnaire (SUS,
-Trust, Qualitative — see the accompanying study materials) regardless of
+Every participant completes the same post-task questionnaire — a
+10-item System Usability Scale, a 7-item trust-perception instrument,
+and 4 open-ended questions (full text in Section 5) — regardless of
 track. Only the task list differs.
 
 ## 3. Session script (read or paraphrase)
@@ -124,15 +132,86 @@ account still requires real bank details regardless of identity method.
 
 ## 5. Post-task questionnaire
 
-Administer the SUS, Trust, and Qualitative instruments exactly as
-written in the accompanying study materials. Record the participant's
-track (A/B/C/D) alongside their responses so results can be split by
-identity method and by role during analysis.
+Administered live at the study URL immediately after the tasks — the
+participant works through it themselves. What follows is the full
+content for reference and for anyone administering it on paper instead.
+
+**Part A — System Usability Scale (SUS).** Standard 10-item instrument
+(Brooke, 1996) — do not reword these; the scoring only works with the
+original wording. 5-point scale: 1 = Strongly disagree, 5 = Strongly
+agree.
+
+1. I think that I would like to use this system frequently.
+2. I found the system unnecessarily complex.
+3. I thought the system was easy to use.
+4. I think that I would need the support of a technical person to be
+   able to use this system.
+5. I found the various functions in this system were well integrated.
+6. I thought there was too much inconsistency in this system.
+7. I would imagine that most people would learn to use this system very
+   quickly.
+8. I found the system very cumbersome to use.
+9. I felt very confident using the system.
+10. I needed to learn a lot of things before I could get going with
+    this system.
+
+**Part B — Trust perception** (adapted from McKnight et al., 2002).
+5-point scale, same as above. Items 1–4 map to McKnight's named
+trusting-belief dimensions; items 5–7 are supplementary trust
+indicators outside that four-dimension structure — state this
+explicitly in the methodology if reporting by dimension.
+
+1. TrustLock seems capable of doing what it claims to do.
+   *(competence)*
+2. I believe TrustLock would act in my best interest if something went
+   wrong with a transaction. *(benevolence)*
+3. TrustLock's stated fees, payout timing, and dispute process seem
+   honestly represented. *(integrity)*
+4. I would be willing to use TrustLock for a real transaction of
+   meaningful value to me. *(trusting intention)*
+5. I trust that funds held in TrustLock's escrow are actually safe
+   until released. *(security perception)*
+6. Seeing another user's rating and verification badges increased my
+   confidence in transacting with them. *(reputation signal)*
+7. I would feel comfortable buying from a marketplace listing posted by
+   someone I don't already know, because the transaction is protected
+   by escrow. *(marketplace trust)*
+
+**Part C — Open-ended (qualitative).**
+
+1. What, if anything, made you hesitate or feel unsure during any task?
+2. Was there any point where you weren't sure what to do next?
+3. What would make you trust this platform more?
+4. Anything else you'd want to tell the people building this?
+
+Record the participant's track (A/B/C/D) alongside their responses so
+results can be split by identity method and by role during analysis.
 
 ## 6. Scoring and write-up
 
-Follow the scoring guide in the accompanying study materials. Report SUS
-and trust means both overall and broken out by track — a meaningful
+**SUS score** (per participant, then average across all):
+
+- Odd-numbered items (1, 3, 5, 7, 9): score = (their rating) − 1
+- Even-numbered items (2, 4, 6, 8, 10): score = 5 − (their rating)
+- Sum all 10 adjusted scores, multiply by 2.5 → 0–100 score
+
+Above 68 is the standard, widely-cited above-average-usability
+benchmark — cite it as such.
+
+**Trust instrument:** report mean and spread (min/max or standard
+deviation) per item, plus an overall mean across all **7** items. There
+is no standardized pass threshold for this instrument, unlike SUS —
+report descriptively and discuss in prose.
+
+**Qualitative responses:** simple thematic coding — group similar
+answers into categories (e.g., "unclear fee visibility," "wallet setup
+friction," "wanted more info before disputing") and report frequency
+counts. A spreadsheet is sufficient for 15–25 participants.
+
+**In the paper:** mean SUS score with the 68-benchmark comparison, mean
+trust scores per item (and by dimension where applicable), and 2–3
+illustrative quotes from the open-ended responses. Report SUS and trust
+means both overall and broken out by track (A/B/C/D) — a meaningful
 difference between email vs. wallet or buyer vs. seller conditions is
-worth noting in the discussion, even if the per-track sample is too
-small for statistical significance.
+worth a sentence or two in the discussion, even if the per-track sample
+is too small for statistical significance.

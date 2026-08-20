@@ -47,10 +47,13 @@ const TRUST_ITEMS: { text: string; tag: string }[] = [
     text: 'I would be willing to use TrustLock for a real transaction of meaningful value to me.',
     tag: 'trusting intention',
   },
-  { text: 'I trust that funds held in TrustLock’s escrow are actually safe until released.', tag: '' },
+  {
+    text: 'I trust that funds held in TrustLock’s escrow are actually safe until released.',
+    tag: 'security perception',
+  },
   {
     text: 'Seeing another user’s rating and verification badges increased my confidence in transacting with them.',
-    tag: '',
+    tag: 'reputation signal',
   },
   {
     text: 'I would feel comfortable buying from a marketplace listing posted by someone I don’t already know, because the transaction is protected by escrow.',
