@@ -6,6 +6,7 @@ import {
   numeric,
   serial,
   integer,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 // --- Better Auth required tables -------------------------------------------
@@ -208,3 +209,28 @@ export type Transaction = typeof transactions.$inferSelect
 export type TransactionEvent = typeof transactionEvents.$inferSelect
 export type Dispute = typeof disputes.$inferSelect
 export type Review = typeof reviews.$inferSelect
+
+// --- NEW: research questionnaire --------------------------------------------
+// Responses to the standalone SUS + trust-perception questionnaire at
+// /questionnaire (see app/questionnaire). This is intentionally NOT linked
+// to `user` — participants fill it out anonymously or under a
+// facilitator-issued participant code, often without ever creating an
+// account, so there is no userId/foreign key here on purpose.
+export const questionnaireResponses = pgTable('questionnaire_responses', {
+  id: serial('id').primaryKey(),
+  // Facilitator-issued code (e.g. "P07"), or null for anonymous submissions.
+  participantId: text('participantId'),
+  // Raw 1–5 ratings for the 10 SUS items, in question order.
+  susResponses: jsonb('susResponses').notNull(),
+  // Precomputed per the standard SUS formula (odd items: rating-1, even
+  // items: 5-rating, summed and multiplied by 2.5) — 0 to 100.
+  susScore: numeric('susScore', { precision: 5, scale: 2 }).notNull(),
+  // Raw 1–5 ratings for the 6 trust-perception items, in question order.
+  trustResponses: jsonb('trustResponses').notNull(),
+  // Mean of trustResponses, 1.00 to 5.00.
+  trustMean: numeric('trustMean', { precision: 4, scale: 2 }).notNull(),
+  // { q1, q2, q3, q4 } open-ended answers, any of which may be empty.
+  qualitative: jsonb('qualitative').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+export type QuestionnaireResponse = typeof questionnaireResponses.$inferSelect
