@@ -133,17 +133,57 @@ export async function getMyStats() {
       amount: transactions.amount,
       buyerId: transactions.buyerId,
       sellerId: transactions.sellerId,
+      payoutStatus: transactions.payoutStatus,
+      payoutAmount: transactions.payoutAmount,
     })
     .from(transactions)
     .where(or(eq(transactions.buyerId, me.id), eq(transactions.sellerId, me.id)))
 
-  const active = rows.filter((r) =>
-    ['accepted', 'funded', 'shipped', 'disputed'].includes(r.status),
-  ).length
-  const completed = rows.filter((r) => r.status === 'completed').length
-  const inEscrow = rows
-    .filter((r) => ['funded', 'shipped', 'disputed'].includes(r.status))
-    .reduce((sum, r) => sum + Number.parseFloat(r.amount), 0)
+  const asBuyer = rows.filter((r) => r.buyerId === me.id)
+  const asSeller = rows.filter((r) => r.sellerId === me.id)
+
+  const activeStatuses = ['accepted', 'funded', 'shipped', 'disputed']
+
+  const buyer = {
+    total: asBuyer.length,
+    active: asBuyer.filter((r) => activeStatuses.includes(r.status)).length,
+    // Shipped-but-not-confirmed — the buyer's next action is due.
+    awaitingConfirmation: asBuyer.filter((r) => r.status === 'shipped').length,
+    disputed: asBuyer.filter((r) => r.status === 'disputed').length,
+    totalSpent: asBuyer
+      .filter((r) => r.status === 'completed')
+      .reduce((sum, r) => sum + Number.parseFloat(r.amount), 0),
+    inEscrow: asBuyer
+      .filter((r) => ['funded', 'shipped', 'disputed'].includes(r.status))
+      .reduce((sum, r) => sum + Number.parseFloat(r.amount), 0),
+  }
+
+  const seller = {
+    total: asSeller.length,
+    active: asSeller.filter((r) => activeStatuses.includes(r.status)).length,
+    // Funded-but-not-shipped — the seller's next action is due.
+    toDispatch: asSeller.filter((r) => r.status === 'funded').length,
+    disputed: asSeller.filter((r) => r.status === 'disputed').length,
+    // "Pending payments" — invited/accepted transactions the buyer hasn't
+    // funded yet, so there's no money in escrow for this sale to rely on.
+    pendingPayments: asSeller.filter((r) =>
+      ['awaiting_acceptance', 'accepted'].includes(r.status),
+    ).length,
+    // Money that has actually landed in the seller's bank account.
+    totalEarnings: asSeller
+      .filter((r) => r.payoutStatus === 'paid')
+      .reduce((sum, r) => sum + Number.parseFloat(r.payoutAmount ?? '0'), 0),
+    availablePaid: asSeller
+      .filter((r) => r.payoutStatus === 'paid')
+      .reduce((sum, r) => sum + Number.parseFloat(r.payoutAmount ?? '0'), 0),
+    // Released from escrow and scheduled/owed, but the bank transfer
+    // hasn't gone through yet (still in the cooling-off window, or
+    // blocked on missing payout details).
+    availableUnpaid: asSeller
+      .filter((r) => ['scheduled', 'blocked_no_bank_details'].includes(r.payoutStatus ?? ''))
+      .reduce((sum, r) => sum + Number.parseFloat(r.payoutAmount ?? '0'), 0),
+    payoutsCompleted: asSeller.filter((r) => r.payoutStatus === 'paid').length,
+  }
 
   const [ratingRow] = await db
     .select({
@@ -154,12 +194,41 @@ export async function getMyStats() {
     .where(eq(reviews.revieweeId, me.id))
 
   return {
-    active,
-    completed,
-    inEscrow,
+    buyer,
+    seller,
     rating: ratingRow?.avg ? Number.parseFloat(ratingRow.avg) : null,
     ratingCount: ratingRow?.count ?? 0,
   }
+}
+
+/** Funded sales awaiting shipment — the seller's action queue. */
+export async function getDispatchQueue() {
+  const me = await getSessionUser()
+  return db
+    .select()
+    .from(transactions)
+    .where(and(eq(transactions.sellerId, me.id), eq(transactions.status, 'funded')))
+    .orderBy(desc(transactions.fundedAt))
+}
+
+/** Every sale that has reached the payout stage, for the Payments page ledger. */
+export async function getPayoutHistory() {
+  const me = await getSessionUser()
+  return db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.sellerId, me.id),
+        or(
+          eq(transactions.payoutStatus, 'scheduled'),
+          eq(transactions.payoutStatus, 'paid'),
+          eq(transactions.payoutStatus, 'blocked_no_bank_details'),
+          eq(transactions.payoutStatus, 'failed'),
+        ),
+      ),
+    )
+    .orderBy(desc(transactions.payoutScheduledAt))
 }
 
 // --- Lifecycle actions ---------------------------------------------------

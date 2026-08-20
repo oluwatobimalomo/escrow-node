@@ -1,19 +1,14 @@
 import { getMyProfile } from '@/app/actions/profile'
-import { getMyPayoutAccount } from '@/app/actions/payout-accounts'
 import { ProfileForm } from '@/components/dashboard/profile-form'
 import { ChangePasswordForm } from '@/components/dashboard/change-password-form'
 import { ReputationSummary } from '@/components/dashboard/reputation-summary'
-import { PayoutAccountForm } from '@/components/dashboard/payout-account-form'
 import { BvnVerificationForm } from '@/components/dashboard/bvn-verification-form'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
 
 export default async function ProfilePage() {
-  const [profile, payoutAccount] = await Promise.all([
-    getMyProfile(),
-    getMyPayoutAccount(),
-  ])
+  const profile = await getMyProfile()
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
@@ -102,11 +97,17 @@ export default async function ProfilePage() {
         <h2 className="text-lg font-medium text-foreground mb-1">
           Payout account
         </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Where you receive money when you sell. Add this before your first
-          sale — payouts are held until it's on file.
+        <p className="text-sm text-muted-foreground">
+          Where you receive money when you sell. Manage your bank details and
+          payout history on the{' '}
+          <Link
+            href="/dashboard/payments"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            Payments
+          </Link>{' '}
+          page.
         </p>
-        <PayoutAccountForm existing={payoutAccount} />
       </Card>
 
       {profile.hasPassword && (
