@@ -29,11 +29,12 @@ below.
 
 1. Create a transaction by inviting a counterparty by email (your
    facilitator will give you an email to use).
-2. Once it's accepted, fund the transaction. Test card:
+2. Once it's accepted, fund the transaction — choose **Transfer** as
+   the payment method (more reliable in testing than Card). If your
+   facilitator asks you to try Card instead: test card
    `4084084084084081`, any future expiry date, CVV `408`, PIN `0000`,
-   OTP `123456`. On the payment screen, you'll see a "Success / Bank
-   Authentication / Declined" option — pick **Success** before
-   completing payment.
+   OTP `123456`, and select **Success** on the option shown before
+   paying.
 3. Before doing anything else, find and read the platform fee and when
    you'd expect the seller to get paid.
 4. Go to **Marketplace** in the sidebar, pick anything listed, and buy
