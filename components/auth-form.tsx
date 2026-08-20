@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
+import { checkEmailAvailable } from '@/app/actions/auth-check'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +21,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const [loading, setLoading] = useState(false)
   const [verificationSent, setVerificationSent] = useState(false)
   const [unverified, setUnverified] = useState(false)
+  const [emailTaken, setEmailTaken] = useState(false)
   const [resending, setResending] = useState(false)
 
   const isSignUp = mode === 'sign-up'
@@ -43,7 +45,25 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     e.preventDefault()
     setError(null)
     setUnverified(false)
+    setEmailTaken(false)
     setLoading(true)
+
+    if (isSignUp) {
+      try {
+        const { available } = await checkEmailAvailable(email)
+        if (!available) {
+          setEmailTaken(true)
+          setLoading(false)
+          return
+        }
+      } catch {
+        // If the availability check itself fails (e.g. rate limited),
+        // fall through to the normal sign-up attempt rather than
+        // blocking the person entirely — Better Auth's own generic
+        // response still handles the existing-email case safely either
+        // way, just without this earlier, friendlier message.
+      }
+    }
 
     const { error } = isSignUp
       ? await authClient.signUp.email({ email, password, name })
@@ -121,6 +141,21 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
             </p>
           </div>
 
+          {emailTaken && (
+            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm text-amber-900">
+                An account already exists for this email.{' '}
+                <Link
+                  href={`/sign-in`}
+                  className="font-medium underline underline-offset-4"
+                >
+                  Sign in instead
+                </Link>
+                , or use a different email address.
+              </p>
+            </div>
+          )}
+
           {unverified && (
             <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3">
               <p className="text-sm text-amber-900">
@@ -166,7 +201,17 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {!isSignUp && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                )}
+              </div>
               <Input
                 id="password"
                 type="password"
