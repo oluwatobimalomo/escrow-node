@@ -54,6 +54,22 @@ export default async function ProfilePage() {
         <h2 className="text-lg font-medium text-foreground mb-4">
           Edit profile
         </h2>
+        <div className="flex flex-col gap-2 mb-4">
+          <label className="text-sm font-medium text-foreground">Email</label>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {profile.email}
+            {profile.emailVerified ? (
+              <span className="ml-auto text-xs text-emerald-600">Verified</span>
+            ) : (
+              <span className="ml-auto text-xs text-warning-foreground">
+                Not verified
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Your email can&apos;t be changed here.
+          </p>
+        </div>
         <ProfileForm
           initialName={profile.name}
           initialBio={profile.bio}

@@ -1,3 +1,14 @@
+# Resend (resend.com -> API Keys). Used for every email the app sends —
+# verification, password reset, transaction/dispute notifications, the
+# account-deletion data export.
+RESEND_API_KEY=your-resend-api-key-here
+# Optional while testing: without this, emails send from
+# onboarding@resend.dev, which ONLY delivers to the email address your
+# Resend account itself is registered with — fine for solo testing, silently
+# fails to deliver to anyone else. Verify a domain in Resend's dashboard
+# (Domains -> Add Domain) and set this before real users sign up:
+# RESEND_FROM_EMAIL="TrustLock <noreply@yourdomain.com>"
+
 # Vercel Blob (Storage tab in your Vercel project -> Create Database ->
 # Blob, or `vercel blob store add` via CLI). Used for profile avatars and
 # product photos (see lib/blob-client.ts / app/api/blob/upload).
