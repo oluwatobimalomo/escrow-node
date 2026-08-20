@@ -3,6 +3,7 @@ import { ProfileForm } from '@/components/dashboard/profile-form'
 import { ChangePasswordForm } from '@/components/dashboard/change-password-form'
 import { ReputationSummary } from '@/components/dashboard/reputation-summary'
 import { BvnVerificationForm } from '@/components/dashboard/bvn-verification-form'
+import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
@@ -118,6 +119,8 @@ export default async function ProfilePage() {
           <ChangePasswordForm />
         </Card>
       )}
+
+      <DeleteAccountSection hasPassword={profile.hasPassword} />
     </div>
   )
 }

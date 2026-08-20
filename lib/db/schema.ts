@@ -239,3 +239,17 @@ export const questionnaireResponses = pgTable('questionnaire_responses', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 export type QuestionnaireResponse = typeof questionnaireResponses.$inferSelect
+
+// --- Account deletion exit feedback -----------------------------------------
+// Deliberately has NO foreign key to `user` — the whole point is that this
+// survives after the account it's about is gone. `userId`/`userEmail` are
+// captured as plain text at the moment of deletion for admin reference,
+// not live references.
+export const accountDeletionFeedback = pgTable('account_deletion_feedback', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull(),
+  userEmail: text('userEmail').notNull(),
+  reason: text('reason'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+export type AccountDeletionFeedback = typeof accountDeletionFeedback.$inferSelect

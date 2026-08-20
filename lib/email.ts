@@ -34,6 +34,7 @@ export async function sendEmail(args: {
   to: string
   subject: string
   html: string
+  attachments?: { filename: string; content: string }[] // content = base64
 }) {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -46,6 +47,7 @@ export async function sendEmail(args: {
       to: args.to,
       subject: args.subject,
       html: args.html,
+      ...(args.attachments ? { attachments: args.attachments } : {}),
     }),
   })
 
@@ -103,6 +105,27 @@ export function resetPasswordEmailHtml(url: string) {
       <p style="color: #888; font-size: 13px;">
         If you didn't request this, you can safely ignore this email —
         your password will not be changed.
+      </p>
+    </div>
+  `
+}
+
+export function accountDataExportEmailHtml() {
+  return `
+    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+      <h2 style="color: #111;">Your TrustLock data</h2>
+      <p style="color: #444; line-height: 1.5;">
+        As requested, your TrustLock account is being deleted. Attached is
+        a copy of your data — profile details, transaction history, reviews,
+        and payout account — as it stood just before deletion.
+      </p>
+      <p style="color: #444; line-height: 1.5;">
+        This is the only copy we'll have going forward; TrustLock's own
+        records of your personal information will be removed shortly. If
+        you didn't request this, please contact support right away.
+      </p>
+      <p style="color: #888; font-size: 13px;">
+        Thanks for having used TrustLock. We're sorry to see you go.
       </p>
     </div>
   `

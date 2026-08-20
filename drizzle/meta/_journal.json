@@ -50,6 +50,13 @@
       "when": 1787188167291,
       "tag": "0006_add_transaction_image",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787188480441,
+      "tag": "0007_add_account_deletion_feedback",
+      "breakpoints": true
     }
   ]
 }
