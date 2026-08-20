@@ -57,6 +57,13 @@
       "when": 1787188480441,
       "tag": "0007_add_account_deletion_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787207041406,
+      "tag": "0008_add_product_listings",
+      "breakpoints": true
     }
   ]
 }

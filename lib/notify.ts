@@ -111,6 +111,23 @@ export async function notifyTransactionInvited(tx: TxRow) {
   }).catch((err) => console.error('Invite email failed:', err))
 }
 
+export async function notifyListingPurchased(tx: TxRow) {
+  // Unlike notifyTransactionInvited, both parties already have accounts
+  // here — a listing purchase creates the transaction directly against a
+  // known sellerId, with no counterpartyEmail invite step. actorId is the
+  // buyer, so only the seller gets notified.
+  await notifyParties(
+    tx,
+    tx.buyerId,
+    `Your listing sold — ${tx.title}`,
+    shell(
+      tx,
+      'Your listing sold',
+      `<p style="color:#444;line-height:1.5;">Someone bought "${tx.title}" from your listing for ${formatNaira(tx.amount)}. It's ready to be funded — once that happens you can ship it.</p>`,
+    ),
+  )
+}
+
 export async function notifyTransactionAccepted(tx: TxRow, actorId: string) {
   await notifyParties(
     tx,

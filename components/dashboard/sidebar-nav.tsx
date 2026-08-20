@@ -10,6 +10,8 @@ import {
   UserCircle,
   ShieldAlert,
   Users,
+  Store,
+  Tag,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -36,11 +38,12 @@ export function SidebarNav({
 
   const mainItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/marketplace', label: 'Marketplace', icon: Store },
     { href: '/dashboard/transactions', label: 'Transactions', icon: ArrowLeftRight },
   ]
 
-  // Sellers get the dispatch queue; buyers have nothing to ship so it's
-  // hidden rather than shown empty.
+  // Sellers get the dispatch queue and listing management; buyers have
+  // nothing to ship or sell so these are hidden rather than shown empty.
   if (isSeller) {
     mainItems.push({
       href: '/dashboard/dispatch',
@@ -48,6 +51,7 @@ export function SidebarNav({
       icon: PackageCheck,
       badge: toDispatchCount > 0 ? toDispatchCount : undefined,
     })
+    mainItems.push({ href: '/dashboard/listings', label: 'My listings', icon: Tag })
   }
 
   mainItems.push({ href: '/dashboard/payments', label: 'Payments', icon: Wallet })

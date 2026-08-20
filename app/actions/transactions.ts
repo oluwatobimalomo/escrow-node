@@ -45,7 +45,7 @@ function isParty(tx: typeof transactions.$inferSelect, userId: string) {
   return tx.buyerId === userId || tx.sellerId === userId
 }
 
-async function logEvent(
+export async function logEvent(
   transactionId: string,
   actorId: string | null,
   type: string,

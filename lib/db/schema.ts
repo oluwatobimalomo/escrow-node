@@ -116,6 +116,13 @@ export const transactions = pgTable('transactions', {
   counterpartyEmail: text('counterpartyEmail'),
   creatorId: text('creatorId').notNull(),
   creatorRole: text('creatorRole').notNull().default('buyer'),
+  // Set when this transaction was created by buying from a marketplace
+  // listing rather than a direct email invite. No FK constraint — the
+  // listing can be edited/delisted/deleted later without needing to touch
+  // historical transaction rows, and this is purely a "how did this
+  // transaction come about" reference, not something the app relies on
+  // being valid.
+  listingId: text('listingId'),
   status: text('status').notNull().default('awaiting_acceptance'),
   deliveryNote: text('deliveryNote'),
   // Paystack transaction reference for the funding charge. Set when the
@@ -212,6 +219,35 @@ export const payoutAccounts = pgTable('payoutAccounts', {
 export type PayoutAccount = typeof payoutAccounts.$inferSelect
 export type Transaction = typeof transactions.$inferSelect
 export type TransactionEvent = typeof transactionEvents.$inferSelect
+
+// --- Marketplace listings ----------------------------------------------
+// Separate from `transactions` on purpose: a listing is a standing offer
+// to sell that can outlive any individual sale (stock, repeat purchases),
+// whereas a transaction is one specific deal between a buyer and seller.
+// A purchase from a listing creates a transaction (see listingId above)
+// but the listing itself persists until quantity runs out or the seller
+// delists it.
+export const productListings = pgTable('product_listings', {
+  id: text('id').primaryKey(),
+  sellerId: text('sellerId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  image: text('image'),
+  price: numeric('price', { precision: 14, scale: 2 }).notNull(),
+  currency: text('currency').notNull().default('NGN'),
+  // Remaining stock. A purchase atomically decrements this (see
+  // buyFromListing in app/actions/listings.ts) to avoid overselling under
+  // concurrent buyers.
+  quantity: integer('quantity').notNull().default(1),
+  // Seller-controlled pause, independent of quantity — lets a seller take
+  // a listing down temporarily without losing its remaining stock count.
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+})
+export type ProductListing = typeof productListings.$inferSelect
 export type Dispute = typeof disputes.$inferSelect
 export type Review = typeof reviews.$inferSelect
 
