@@ -52,6 +52,10 @@ const TRUST_ITEMS: { text: string; tag: string }[] = [
     text: 'Seeing another user’s rating and verification badges increased my confidence in transacting with them.',
     tag: '',
   },
+  {
+    text: 'I would feel comfortable buying from a marketplace listing posted by someone I don’t already know, because the transaction is protected by escrow.',
+    tag: 'marketplace trust',
+  },
 ]
 
 const QUAL_ITEMS: { id: 'q1' | 'q2' | 'q3' | 'q4'; text: string }[] = [
@@ -118,7 +122,7 @@ export function QuestionnaireForm() {
   const [started, setStarted] = useState(false)
 
   const [susAnswers, setSusAnswers] = useState<(number | null)[]>(Array(10).fill(null))
-  const [trustAnswers, setTrustAnswers] = useState<(number | null)[]>(Array(6).fill(null))
+  const [trustAnswers, setTrustAnswers] = useState<(number | null)[]>(Array(7).fill(null))
   const [qualAnswers, setQualAnswers] = useState<QualAnswers>({ q1: '', q2: '', q3: '', q4: '' })
 
   const [validationMsg, setValidationMsg] = useState('')
@@ -129,7 +133,7 @@ export function QuestionnaireForm() {
 
   const susDoneFrac = useMemo(() => susAnswers.filter((a) => a !== null).length / 10, [susAnswers])
   const trustDoneFrac = useMemo(
-    () => trustAnswers.filter((a) => a !== null).length / 6,
+    () => trustAnswers.filter((a) => a !== null).length / 7,
     [trustAnswers],
   )
   const qualDoneFrac = useMemo(
@@ -276,7 +280,8 @@ export function QuestionnaireForm() {
               <h3 className={styles.cardTitle}>Before you start</h3>
               <p className={styles.cardSub}>
                 This is a test session for TrustLock, an escrow platform for online buying and
-                selling. Please confirm you understand the following:
+                selling — whether you were invited directly into a transaction or found one by
+                browsing the marketplace. Please confirm you understand the following:
               </p>
               <ul className={styles.consentList}>
                 <li>
@@ -373,7 +378,7 @@ export function QuestionnaireForm() {
             <div>
               {TRUST_ITEMS.map((item, i) => (
                 <div className={styles.item} id={`item-trust-${i + 1}`} key={i}>
-                  <div className={styles.itemNum}>{i + 1} / 6</div>
+                  <div className={styles.itemNum}>{i + 1} / 7</div>
                   <div className={styles.itemText}>
                     {item.text}
                     {item.tag && <span className={styles.dimTag}>{item.tag}</span>}

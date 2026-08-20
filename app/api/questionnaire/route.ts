@@ -5,17 +5,11 @@ import { enforceRateLimit } from '@/lib/rate-limit'
 
 // Public, unauthenticated endpoint — study participants submit this without
 // an account, so (unlike the Paystack webhook) there's no signature to
-// verify. Rate limiting is the main abuse guard.
-//
-// NOTE: this reuses the 'system' rate-limit category, the same one the
-// Paystack webhook route uses, since that's the only category visible from
-// the files shared so far. If lib/rate-limit.ts supports per-endpoint
-// categories, swap this for a dedicated one (e.g. 'questionnaire') so a
-// burst of legitimate submissions can't get throttled by unrelated system
-// traffic, or vice versa.
+// verify. Rate limiting is the main abuse guard, on its own tier so it
+// can't be throttled by (or throttle) unrelated webhook/system traffic.
 export async function POST(request: Request) {
   try {
-    await enforceRateLimit('system')
+    await enforceRateLimit('questionnaire')
   } catch {
     return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
   }
@@ -51,7 +45,7 @@ export async function POST(request: Request) {
 
   const trustValid =
     Array.isArray(trust_responses) &&
-    trust_responses.length === 6 &&
+    trust_responses.length === 7 &&
     trust_responses.every((n) => typeof n === 'number' && n >= 1 && n <= 5)
 
   const qualValid = typeof qualitative === 'object' && qualitative !== null

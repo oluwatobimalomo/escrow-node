@@ -39,6 +39,12 @@ const limiters = {
   // Everything else authenticated — creating transactions, disputes,
   // reviews, profile edits.
   general: makeLimiter(30, '1 m'),
+  // The public, unauthenticated research questionnaire. Deliberately its
+  // own tier, not sharing 'system' — a burst of legitimate study
+  // submissions (e.g. a facilitator running several participants back to
+  // back) shouldn't be able to throttle Paystack webhook delivery, and a
+  // webhook retry storm shouldn't block real participants either.
+  questionnaire: makeLimiter(20, '1 m'),
 } as const
 
 type Tier = keyof typeof limiters
