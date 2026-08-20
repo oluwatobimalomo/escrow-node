@@ -31,7 +31,9 @@ below.
    facilitator will give you an email to use).
 2. Once it's accepted, fund the transaction. Test card:
    `4084084084084081`, any future expiry date, CVV `408`, PIN `0000`,
-   OTP `123456`.
+   OTP `123456`. On the payment screen, you'll see a "Success / Bank
+   Authentication / Declined" option — pick **Success** before
+   completing payment.
 3. Before doing anything else, find and read the platform fee and when
    you'd expect the seller to get paid.
 4. Go to **Marketplace** in the sidebar, pick anything listed, and buy

@@ -83,7 +83,13 @@ All tracks start the same way (account creation), then diverge.
 2. Switch to the counterparty account (or have the facilitator do this)
    and accept the transaction.
 3. Fund the transaction. Test card: `4084084084084081`, any future
-   expiry, CVV `408`, PIN `0000`, OTP `123456`.
+   expiry, CVV `408`, PIN `0000`, OTP `123456`. **Important:** Paystack's
+   test checkout shows a "Success / Bank Authentication / Declined"
+   selector — the participant must explicitly click **Success** before
+   hitting Pay, or Paystack will simulate a real decline on purpose. Brief
+   participants on this before they reach checkout, or watch for it and
+   step in if they miss it — otherwise they'll see a genuine-looking
+   "insufficient funds" error that has nothing to do with the app.
 4. Before doing anything else, find and read the platform fee and
    expected payout timing for this transaction. Don't prompt where to
    look — this tests discoverability.
