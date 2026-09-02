@@ -94,120 +94,130 @@ export async function adminResolveDispute(
   const admin = await requireAdmin()
   await enforceRateLimit('money', admin.id)
 
-  const [dispute] = await db
-    .select()
-    .from(disputes)
-    .where(and(eq(disputes.id, disputeId), eq(disputes.status, 'open')))
-    .limit(1)
-  if (!dispute) throw new Error('No open dispute with that id')
+  return db.transaction(async (dbtx) => {
+    const [dispute] = await dbtx
+      .select()
+      .from(disputes)
+      .where(and(eq(disputes.id, disputeId), eq(disputes.status, 'open')))
+      .for('update')
+      .limit(1)
+    if (!dispute) throw new Error('No open dispute with that id')
 
-  const [tx] = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.id, dispute.transactionId))
-    .limit(1)
-  if (!tx) throw new Error('Transaction not found')
-  if (tx.status !== 'disputed')
-    throw new Error('Transaction is not currently in a disputed state')
+    const [tx] = await dbtx
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, dispute.transactionId))
+      .for('update')
+      .limit(1)
+    if (!tx) throw new Error('Transaction not found')
+    if (tx.status !== 'disputed')
+      throw new Error('Transaction is not currently in a disputed state')
 
-  const totalAmount = Number.parseFloat(tx.amount)
-  let refundAmount: number | null = null
-  let refundReference: string | null = null
+    const totalAmount = Number.parseFloat(tx.amount)
+    let refundAmount: number | null = null
+    let refundReference: string | null = null
 
-  if (outcome === 'refund' || outcome === 'split') {
-    if (!tx.paystackReference) {
-      throw new Error(
-        'No Paystack reference on this transaction — cannot process a refund',
-      )
-    }
-    const amountNaira =
-      outcome === 'split'
-        ? options.splitToBuyerNaira
-        : undefined // undefined = full refund
-
-    if (outcome === 'split') {
-      if (
-        options.splitToBuyerNaira == null ||
-        options.splitToBuyerNaira <= 0 ||
-        options.splitToBuyerNaira >= totalAmount
-      ) {
+    if (outcome === 'refund' || outcome === 'split') {
+      if (!tx.paystackReference) {
         throw new Error(
-          `For a split, enter an amount between 0 and ${totalAmount} to refund to the buyer`,
+          'No Paystack reference on this transaction — cannot process a refund',
         )
       }
+      const amountNaira =
+        outcome === 'split'
+          ? options.splitToBuyerNaira
+          : undefined // undefined = full refund
+
+      if (outcome === 'split') {
+        if (
+          options.splitToBuyerNaira == null ||
+          options.splitToBuyerNaira <= 0 ||
+          options.splitToBuyerNaira >= totalAmount
+        ) {
+          throw new Error(
+            `For a split, enter an amount between 0 and ${totalAmount} to refund to the buyer`,
+          )
+        }
+      }
+
+      // Note: this call to Paystack happens while the dispute/transaction
+      // rows are locked (SELECT ... FOR UPDATE) inside this transaction, so
+      // a concurrent admin click or retry blocks on the row lock rather than
+      // racing to also call Paystack. The trade-off is the lock is held for
+      // the duration of this network call — acceptable here since admin
+      // dispute resolution isn't a high-frequency path.
+      const refund = await refundPaystackTransaction({
+        reference: tx.paystackReference,
+        amountNaira,
+      })
+      refundAmount = amountNaira ?? totalAmount
+      refundReference = refund.transaction_reference
     }
 
-    const refund = await refundPaystackTransaction({
-      reference: tx.paystackReference,
-      amountNaira,
-    })
-    refundAmount = amountNaira ?? totalAmount
-    refundReference = refund.transaction_reference
-  }
+    const now = new Date()
 
-  const now = new Date()
+    // 'release': seller gets the full amount, fee-deducted, on the normal
+    // schedule. 'split': seller gets whatever's left after the buyer's
+    // refund — same fee/cooling-off treatment, just on the remainder.
+    let sellerFeeAmount: number | null = null
+    let sellerPayoutAmount: number | null = null
+    if (outcome === 'release' || outcome === 'split') {
+      const sellerGross =
+        outcome === 'release' ? totalAmount : totalAmount - (refundAmount ?? 0)
+      const calc = calculatePayout(sellerGross)
+      sellerFeeAmount = calc.feeAmount
+      sellerPayoutAmount = calc.payoutAmount
+    }
 
-  // 'release': seller gets the full amount, fee-deducted, on the normal
-  // schedule. 'split': seller gets whatever's left after the buyer's
-  // refund — same fee/cooling-off treatment, just on the remainder.
-  let sellerFeeAmount: number | null = null
-  let sellerPayoutAmount: number | null = null
-  if (outcome === 'release' || outcome === 'split') {
-    const sellerGross =
-      outcome === 'release' ? totalAmount : totalAmount - (refundAmount ?? 0)
-    const calc = calculatePayout(sellerGross)
-    sellerFeeAmount = calc.feeAmount
-    sellerPayoutAmount = calc.payoutAmount
-  }
+    await dbtx
+      .update(disputes)
+      .set({
+        status: 'resolved',
+        resolution: outcome,
+        resolvedById: admin.id,
+        adminNote: options.note?.trim() || null,
+        resolvedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(disputes.id, dispute.id))
 
-  await db
-    .update(disputes)
-    .set({
-      status: 'resolved',
-      resolution: outcome,
-      resolvedById: admin.id,
-      adminNote: options.note?.trim() || null,
-      resolvedAt: now,
-      updatedAt: now,
-    })
-    .where(eq(disputes.id, dispute.id))
+    await dbtx
+      .update(transactions)
+      .set({
+        // 'split' leaves the transaction as 'refunded' at the DB level since
+        // that's the closer of the two existing statuses — the split detail
+        // itself lives on refundAmount / the dispute record, not a third
+        // transaction status.
+        status: outcome === 'release' ? 'completed' : 'refunded',
+        releasedAt: outcome === 'release' ? now : null,
+        refundAmount: refundAmount != null ? String(refundAmount) : null,
+        refundReference,
+        platformFeeAmount: sellerFeeAmount != null ? String(sellerFeeAmount) : null,
+        payoutAmount: sellerPayoutAmount != null ? String(sellerPayoutAmount) : null,
+        payoutStatus: sellerPayoutAmount != null ? 'scheduled' : null,
+        payoutScheduledAt: sellerPayoutAmount != null ? payoutScheduledFor(now) : null,
+        updatedAt: now,
+      })
+      .where(eq(transactions.id, tx.id))
 
-  await db
-    .update(transactions)
-    .set({
-      // 'split' leaves the transaction as 'refunded' at the DB level since
-      // that's the closer of the two existing statuses — the split detail
-      // itself lives on refundAmount / the dispute record, not a third
-      // transaction status.
-      status: outcome === 'release' ? 'completed' : 'refunded',
-      releasedAt: outcome === 'release' ? now : null,
-      refundAmount: refundAmount != null ? String(refundAmount) : null,
-      refundReference,
-      platformFeeAmount: sellerFeeAmount != null ? String(sellerFeeAmount) : null,
-      payoutAmount: sellerPayoutAmount != null ? String(sellerPayoutAmount) : null,
-      payoutStatus: sellerPayoutAmount != null ? 'scheduled' : null,
-      payoutScheduledAt: sellerPayoutAmount != null ? payoutScheduledFor(now) : null,
-      updatedAt: now,
-    })
-    .where(eq(transactions.id, tx.id))
+    const summary =
+      outcome === 'release'
+        ? `Admin force-resolved dispute — payout of ${sellerPayoutAmount} scheduled for seller`
+        : outcome === 'refund'
+          ? 'Admin force-resolved dispute — full refund issued to buyer'
+          : `Admin force-resolved dispute — split: ₦${refundAmount} refunded to buyer, ₦${sellerPayoutAmount} payout scheduled for seller`
+    await logEvent(tx.id, admin.id, 'dispute_resolved', summary)
+    await notifyDisputeResolved(
+      { ...tx, status: outcome === 'release' ? 'completed' : 'refunded' },
+      null,
+      outcome,
+      true,
+    )
 
-  const summary =
-    outcome === 'release'
-      ? `Admin force-resolved dispute — payout of ${sellerPayoutAmount} scheduled for seller`
-      : outcome === 'refund'
-        ? 'Admin force-resolved dispute — full refund issued to buyer'
-        : `Admin force-resolved dispute — split: ₦${refundAmount} refunded to buyer, ₦${sellerPayoutAmount} payout scheduled for seller`
-  await logEvent(tx.id, admin.id, 'dispute_resolved', summary)
-  await notifyDisputeResolved(
-    { ...tx, status: outcome === 'release' ? 'completed' : 'refunded' },
-    null,
-    outcome,
-    true,
-  )
-
-  revalidatePath('/admin/disputes')
-  revalidatePath(`/dashboard/transactions/${tx.id}`)
-  revalidatePath('/dashboard')
+    revalidatePath('/admin/disputes')
+    revalidatePath(`/dashboard/transactions/${tx.id}`)
+    revalidatePath('/dashboard')
+  })
 }
 
 // --- User Management --------------------------------------------------
