@@ -37,6 +37,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toastManager } from '@/components/ui/toast'
 
 type Props = {
   transactionId: string
@@ -77,12 +78,19 @@ export function TransactionActions({
   const [fundEmail, setFundEmail] = useState(defaultEmail)
   const [redirecting, setRedirecting] = useState(false)
 
-  const run = async (key: string, fn: () => Promise<unknown>) => {
+  const run = async (
+    key: string,
+    fn: () => Promise<unknown>,
+    successMessage?: string,
+  ) => {
     setError(null)
     setPending(key)
     try {
       await fn()
       router.refresh()
+      if (successMessage) {
+        toastManager.add({ title: successMessage, type: 'success' })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -96,7 +104,7 @@ export function TransactionActions({
     actions.push(
       <Button
         key="accept"
-        onClick={() => run('accept', () => acceptTransaction(transactionId))}
+        onClick={() => run('accept', () => acceptTransaction(transactionId), 'Transaction accepted')}
         disabled={pending !== null}
       >
         <CheckCheck className="size-4" aria-hidden="true" />
@@ -110,7 +118,7 @@ export function TransactionActions({
       <Button
         key="cancel"
         variant="outline"
-        onClick={() => run('cancel', () => cancelTransaction(transactionId))}
+        onClick={() => run('cancel', () => cancelTransaction(transactionId), 'Transaction cancelled')}
         disabled={pending !== null}
       >
         <X className="size-4" aria-hidden="true" />
@@ -214,7 +222,7 @@ export function TransactionActions({
           <DialogFooter>
             <Button
               onClick={async () => {
-                await run('ship', () => markShipped(transactionId, shipNote))
+                await run('ship', () => markShipped(transactionId, shipNote), 'Marked as shipped')
                 setShipOpen(false)
               }}
               disabled={pending !== null}
@@ -231,7 +239,7 @@ export function TransactionActions({
     actions.push(
       <Button
         key="deliver"
-        onClick={() => run('deliver', () => confirmDelivery(transactionId))}
+        onClick={() => run('deliver', () => confirmDelivery(transactionId), 'Delivery confirmed — funds released')}
         disabled={pending !== null}
       >
         <HandCoins className="size-4" aria-hidden="true" />
@@ -292,8 +300,10 @@ export function TransactionActions({
             <Button
               variant="destructive"
               onClick={async () => {
-                await run('dispute', () =>
-                  raiseDispute(transactionId, disputeReason, disputeDetails),
+                await run(
+                  'dispute',
+                  () => raiseDispute(transactionId, disputeReason, disputeDetails),
+                  'Dispute submitted',
                 )
                 setDisputeOpen(false)
               }}
@@ -312,8 +322,10 @@ export function TransactionActions({
       <Button
         key="resolve-release"
         onClick={() =>
-          run('resolve-release', () =>
-            resolveDispute(transactionId, 'release'),
+          run(
+            'resolve-release',
+            () => resolveDispute(transactionId, 'release'),
+            'Settled — funds released to seller',
           )
         }
         disabled={pending !== null}
@@ -327,7 +339,11 @@ export function TransactionActions({
         key="resolve-refund"
         variant="outline"
         onClick={() =>
-          run('resolve-refund', () => resolveDispute(transactionId, 'refund'))
+          run(
+            'resolve-refund',
+            () => resolveDispute(transactionId, 'refund'),
+            'Settled — refund issued to buyer',
+          )
         }
         disabled={pending !== null}
       >
@@ -416,7 +432,11 @@ export function TransactionActions({
           <Button
             className="self-start"
             onClick={() =>
-              run('review', () => submitReview(transactionId, rating, comment))
+              run(
+                'review',
+                () => submitReview(transactionId, rating, comment),
+                'Review submitted',
+              )
             }
             disabled={pending !== null || rating === 0}
           >
