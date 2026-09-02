@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { TransactionActions } from '@/components/dashboard/transaction-actions'
+import { TransactionStepper } from '@/components/dashboard/transaction-stepper'
 import { getFeeTier } from '@/lib/payout'
 import { ArrowLeft, Star } from 'lucide-react'
 
@@ -64,6 +65,10 @@ export default async function TransactionPage({
         </div>
         <StatusBadge status={tx.status} />
       </div>
+
+      <Card className="mt-5 p-4">
+        <TransactionStepper tx={tx} />
+      </Card>
 
       {tx.image && (
         <img
