@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { getMyStats } from '@/app/actions/transactions'
 import { getMyListings } from '@/app/actions/listings'
 import { DashboardShell } from '@/components/dashboard/dashboard-shell'
+import { Toaster } from '@/components/ui/toast'
 
 export default async function DashboardLayout({
   children,
@@ -24,12 +25,15 @@ export default async function DashboardLayout({
   const isSeller = stats.seller.total > 0 || myListings.length > 0
 
   return (
-    <DashboardShell
-      isSeller={isSeller}
-      isAdmin={session.user.role === 'admin'}
-      toDispatchCount={stats.seller.toDispatch}
-    >
-      {children}
-    </DashboardShell>
+    <>
+      <DashboardShell
+        isSeller={isSeller}
+        isAdmin={session.user.role === 'admin'}
+        toDispatchCount={stats.seller.toDispatch}
+      >
+        {children}
+      </DashboardShell>
+      <Toaster />
+    </>
   )
 }
