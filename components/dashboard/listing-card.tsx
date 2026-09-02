@@ -1,10 +1,15 @@
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { formatNaira } from '@/lib/escrow'
-import { ImageOff } from 'lucide-react'
+import { ImageOff, Star } from 'lucide-react'
 import type { ProductListing } from '@/lib/db/schema'
 
-export function ListingCard({ listing }: { listing: ProductListing }) {
+type ListingWithRating = ProductListing & {
+  sellerRating?: { avg: number | null; count: number }
+}
+
+export function ListingCard({ listing }: { listing: ListingWithRating }) {
+  const rating = listing.sellerRating
   return (
     <Link href={`/dashboard/marketplace/${listing.id}`}>
       <Card className="h-full gap-0 overflow-hidden p-0 transition-shadow hover:shadow-md">
@@ -24,6 +29,12 @@ export function ListingCard({ listing }: { listing: ProductListing }) {
           <p className="font-mono text-sm font-semibold text-foreground">
             {formatNaira(listing.price)}
           </p>
+          {rating && rating.count > 0 && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Star className="size-3 fill-warning text-warning" aria-hidden="true" />
+              {rating.avg?.toFixed(1)} ({rating.count})
+            </p>
+          )}
           {listing.quantity <= 3 && (
             <p className="text-xs text-warning-foreground">
               Only {listing.quantity} left

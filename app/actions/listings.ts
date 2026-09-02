@@ -2,12 +2,12 @@
 
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { productListings, transactions, user } from '@/lib/db/schema'
+import { productListings, transactions, user, reviews } from '@/lib/db/schema'
 import { generateTransactionCode } from '@/lib/escrow'
 import { logEvent } from '@/app/actions/transactions'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { notifyListingPurchased } from '@/lib/notify'
-import { and, desc, eq, gt, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, ne, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
@@ -18,15 +18,59 @@ async function getSessionUser() {
   return session.user
 }
 
+/**
+ * Aggregate rating lookup for a batch of sellers — one query for however
+ * many distinct sellers appear on a listings page, rather than one query
+ * per listing. Mirrors the avg/count pattern already used for a user's own
+ * rating in app/actions/transactions.ts (getMyStats).
+ */
+async function getSellerRatings(sellerIds: string[]) {
+  if (sellerIds.length === 0) return new Map<string, { avg: number | null; count: number }>()
+  const rows = await db
+    .select({
+      revieweeId: reviews.revieweeId,
+      avg: sql<string | null>`avg(${reviews.rating})`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(reviews)
+    .where(inArray(reviews.revieweeId, sellerIds))
+    .groupBy(reviews.revieweeId)
+  return new Map(
+    rows.map((r) => [
+      r.revieweeId,
+      { avg: r.avg ? Number.parseFloat(r.avg) : null, count: r.count },
+    ]),
+  )
+}
+
 // --- Reads ---------------------------------------------------------------
 
-/** Public browse feed — active listings with stock remaining, newest first. */
+/**
+ * Marketplace browse feed — active listings with stock remaining, newest
+ * first, excluding the viewer's own listings. Sellers manage and view
+ * their own listings from "My listings" instead; showing them here too
+ * would be redundant and would surface a Buy button that's blocked anyway
+ * (buyFromListing already rejects buying your own listing).
+ */
 export async function getActiveListings() {
-  return db
+  const me = await getSessionUser()
+  const listings = await db
     .select()
     .from(productListings)
-    .where(and(eq(productListings.active, true), gt(productListings.quantity, 0)))
+    .where(
+      and(
+        eq(productListings.active, true),
+        gt(productListings.quantity, 0),
+        ne(productListings.sellerId, me.id),
+      ),
+    )
     .orderBy(desc(productListings.createdAt))
+
+  const ratings = await getSellerRatings([...new Set(listings.map((l) => l.sellerId))])
+  return listings.map((listing) => ({
+    ...listing,
+    sellerRating: ratings.get(listing.sellerId) ?? { avg: null, count: 0 },
+  }))
 }
 
 export async function getListing(id: string) {
@@ -43,7 +87,10 @@ export async function getListing(id: string) {
     .where(eq(user.id, listing.sellerId))
     .limit(1)
 
-  return { ...listing, seller: seller ?? null }
+  const ratings = await getSellerRatings([listing.sellerId])
+  const sellerRating = ratings.get(listing.sellerId) ?? { avg: null, count: 0 }
+
+  return { ...listing, seller: seller ?? null, sellerRating }
 }
 
 export async function getMyListings() {

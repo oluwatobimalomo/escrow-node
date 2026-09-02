@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { getActiveListings } from '@/app/actions/listings'
-import { ListingCard } from '@/components/dashboard/listing-card'
+import { getActiveListings, getMyListings } from '@/app/actions/listings'
+import { MarketplaceBrowser } from '@/components/dashboard/marketplace-browser'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Plus, Store } from 'lucide-react'
 
 export default async function MarketplacePage() {
-  const listings = await getActiveListings()
+  const [listings, myListings] = await Promise.all([getActiveListings(), getMyListings()])
+  const hasOwnListings = myListings.length > 0
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,21 +32,21 @@ export default async function MarketplacePage() {
           <span className="flex size-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
             <Store className="size-6" aria-hidden="true" />
           </span>
-          <p className="font-medium text-foreground">Nothing listed yet</p>
+          <p className="font-medium text-foreground">
+            {hasOwnListings ? 'Nothing from other sellers yet' : 'Nothing listed yet'}
+          </p>
           <p className="max-w-sm text-sm text-muted-foreground">
-            Be the first to publish something for sale.
+            {hasOwnListings
+              ? 'No other sellers have listed anything yet. You can view and manage your own listings from My listings.'
+              : 'Be the first to publish something for sale.'}
           </p>
           <Button render={<Link href="/dashboard/listings/new" />} className="mt-2">
             <Plus className="size-4" aria-hidden="true" />
-            Create a listing
+            {hasOwnListings ? 'Create another listing' : 'Create a listing'}
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </div>
+        <MarketplaceBrowser listings={listings} />
       )}
     </div>
   )
