@@ -11,7 +11,7 @@ import {
 } from '@/lib/db/schema'
 import { generateTransactionCode } from '@/lib/escrow'
 import { initializePaystackTransaction } from '@/lib/paystack'
-import { calculatePayout, payoutScheduledFor } from '@/lib/payout'
+import { calculatePayout, payoutScheduledFor, AUTO_RELEASE_DAYS } from '@/lib/payout'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import {
   notifyTransactionInvited,
@@ -23,7 +23,7 @@ import {
   notifyDisputeRaised,
   notifyDisputeResolved,
 } from '@/lib/notify'
-import { and, desc, eq, or, sql } from 'drizzle-orm'
+import { and, desc, eq, lte, or, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
@@ -495,6 +495,75 @@ export async function confirmDelivery(id: string) {
     revalidatePath(`/dashboard/transactions/${id}`)
     revalidatePath('/dashboard')
   })
+}
+
+/**
+ * System-triggered counterpart to confirmDelivery — called only from the
+ * payouts cron (app/api/cron/process-payouts/route.ts), never from the
+ * client. If a buyer neither confirms delivery nor raises a dispute within
+ * AUTO_RELEASE_DAYS of the seller marking an item shipped, funds release to
+ * the seller automatically instead of staying stuck in escrow indefinitely
+ * with no recourse for the seller. The row lock below re-checks status
+ * inside the transaction, so a dispute raised or a manual confirmation
+ * landing at the same moment always wins over the automatic release.
+ */
+export async function autoReleaseStaleShipments() {
+  const cutoff = new Date(Date.now() - AUTO_RELEASE_DAYS * 24 * 60 * 60 * 1000)
+  const stale = await db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(and(eq(transactions.status, 'shipped'), lte(transactions.shippedAt, cutoff)))
+
+  const results: { transactionId: string; outcome: string }[] = []
+
+  for (const { id } of stale) {
+    const outcome = await db.transaction(async (dbtx) => {
+      const [tx] = await dbtx
+        .select()
+        .from(transactions)
+        .where(eq(transactions.id, id))
+        .for('update')
+        .limit(1)
+      // Re-check status inside the lock — a dispute or manual confirmation
+      // may have landed in the moments between the scan above and
+      // acquiring this row lock.
+      if (!tx || tx.status !== 'shipped') return 'skipped_state_changed'
+
+      const now = new Date()
+      const { feeAmount, payoutAmount } = calculatePayout(Number.parseFloat(tx.amount))
+      await dbtx
+        .update(transactions)
+        .set({
+          status: 'completed',
+          deliveredAt: now,
+          releasedAt: now,
+          platformFeeAmount: String(feeAmount),
+          payoutAmount: String(payoutAmount),
+          payoutStatus: 'scheduled',
+          payoutScheduledAt: payoutScheduledFor(now),
+          updatedAt: now,
+        })
+        .where(eq(transactions.id, id))
+      await logEvent(
+        id,
+        null,
+        'auto_released',
+        `Escrow automatically released to the seller after ${AUTO_RELEASE_DAYS} days with no delivery confirmation or dispute`,
+      )
+      await notifyTransactionCompleted(
+        { ...tx, status: 'completed', payoutAmount: String(payoutAmount) },
+        null,
+      )
+      return 'released'
+    })
+    results.push({ transactionId: id, outcome })
+  }
+
+  if (results.some((r) => r.outcome === 'released')) {
+    revalidatePath('/dashboard')
+  }
+
+  return results
 }
 
 // --- Disputes -------------------------------------------------------------

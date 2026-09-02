@@ -4,6 +4,7 @@ import { transactions, payoutAccounts, user } from '@/lib/db/schema'
 import { initiateTransfer } from '@/lib/paystack'
 import { sendEmail } from '@/lib/email'
 import { notifyPayoutSent } from '@/lib/notify'
+import { autoReleaseStaleShipments } from '@/app/actions/transactions'
 import { and, eq, isNotNull, lte } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 
@@ -21,6 +22,11 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Auto-release stale shipments first, so anything that just got
+  // auto-completed is picked up by the payout query below in the same
+  // run rather than waiting for tomorrow's cron.
+  const autoReleaseResults = await autoReleaseStaleShipments()
 
   const due = await db
     .select()
@@ -99,5 +105,10 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ processed: results.length, results })
+  return NextResponse.json({
+    autoReleased: autoReleaseResults.filter((r) => r.outcome === 'released').length,
+    autoReleaseResults,
+    processed: results.length,
+    results,
+  })
 }

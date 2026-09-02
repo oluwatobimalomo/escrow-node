@@ -168,7 +168,7 @@ export async function notifyTransactionShipped(tx: TxRow, actorId: string) {
   )
 }
 
-export async function notifyTransactionCompleted(tx: TxRow, actorId: string) {
+export async function notifyTransactionCompleted(tx: TxRow, actorId: string | null) {
   await notifyParties(
     tx,
     actorId,

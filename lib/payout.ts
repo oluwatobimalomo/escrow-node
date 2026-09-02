@@ -37,3 +37,12 @@ export function calculatePayout(amount: number) {
 export function payoutScheduledFor(from: Date = new Date()) {
   return new Date(from.getTime() + PAYOUT_COOLING_OFF_HOURS * 60 * 60 * 1000)
 }
+
+// If a buyer never confirms delivery and never disputes, funds shouldn't
+// stay stuck in escrow indefinitely with no recourse for the seller. The
+// payouts cron auto-releases to the seller this many days after the ship
+// date if the buyer has taken no action. A dispute raised at any point
+// before the cron actually runs always takes priority — see
+// autoReleaseStaleShipments in app/actions/transactions.ts.
+export const AUTO_RELEASE_DAYS = 7
+
