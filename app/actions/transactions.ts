@@ -394,23 +394,26 @@ export async function initiateFunding(id: string, email: string) {
  * that originates directly from the browser.
  */
 export async function markFundedFromVerifiedPayment(reference: string) {
-  const [tx] = await db
-    .select()
-    .from(transactions)
-    .where(eq(transactions.paystackReference, reference))
-    .limit(1)
-  if (!tx) return null
-  if (tx.status !== 'accepted') return tx // already processed or in a later state; idempotent no-op
+  return db.transaction(async (dbtx) => {
+    const [tx] = await dbtx
+      .select()
+      .from(transactions)
+      .where(eq(transactions.paystackReference, reference))
+      .for('update')
+      .limit(1)
+    if (!tx) return null
+    if (tx.status !== 'accepted') return tx // already processed or in a later state; idempotent no-op
 
-  await db
-    .update(transactions)
-    .set({ status: 'funded', fundedAt: new Date(), updatedAt: new Date() })
-    .where(eq(transactions.id, tx.id))
-  await logEvent(tx.id, null, 'funded', 'Funds secured in escrow via Paystack')
-  await notifyTransactionFunded(tx)
-  revalidatePath(`/dashboard/transactions/${tx.id}`)
-  revalidatePath('/dashboard')
-  return tx
+    await dbtx
+      .update(transactions)
+      .set({ status: 'funded', fundedAt: new Date(), updatedAt: new Date() })
+      .where(eq(transactions.id, tx.id))
+    await logEvent(tx.id, null, 'funded', 'Funds secured in escrow via Paystack')
+    await notifyTransactionFunded(tx)
+    revalidatePath(`/dashboard/transactions/${tx.id}`)
+    revalidatePath('/dashboard')
+    return tx
+  })
 }
 
 export async function markShipped(id: string, note?: string) {
@@ -447,47 +450,51 @@ export async function markShipped(id: string, note?: string) {
 export async function confirmDelivery(id: string) {
   const me = await getSessionUser()
   await enforceRateLimit('money', me.id)
-  const [tx] = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.id, id),
-        eq(transactions.status, 'shipped'),
-        eq(transactions.buyerId, me.id),
-      ),
-    )
-    .limit(1)
-  if (!tx) throw new Error('Only the buyer can confirm delivery')
 
-  const now = new Date()
-  const { feeAmount, payoutAmount } = calculatePayout(Number.parseFloat(tx.amount))
-  await db
-    .update(transactions)
-    .set({
-      status: 'completed',
-      deliveredAt: now,
-      releasedAt: now,
-      platformFeeAmount: String(feeAmount),
-      payoutAmount: String(payoutAmount),
-      payoutStatus: 'scheduled',
-      payoutScheduledAt: payoutScheduledFor(now),
-      updatedAt: now,
-    })
-    .where(eq(transactions.id, id))
-  await logEvent(id, me.id, 'delivered', 'Delivery confirmed by buyer')
-  await logEvent(
-    id,
-    null,
-    'released',
-    `Escrow released — payout of ${payoutAmount} scheduled after the cooling-off window`,
-  )
-  await notifyTransactionCompleted(
-    { ...tx, status: 'completed', payoutAmount: String(payoutAmount) },
-    me.id,
-  )
-  revalidatePath(`/dashboard/transactions/${id}`)
-  revalidatePath('/dashboard')
+  return db.transaction(async (dbtx) => {
+    const [tx] = await dbtx
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.id, id),
+          eq(transactions.status, 'shipped'),
+          eq(transactions.buyerId, me.id),
+        ),
+      )
+      .for('update')
+      .limit(1)
+    if (!tx) throw new Error('Only the buyer can confirm delivery')
+
+    const now = new Date()
+    const { feeAmount, payoutAmount } = calculatePayout(Number.parseFloat(tx.amount))
+    await dbtx
+      .update(transactions)
+      .set({
+        status: 'completed',
+        deliveredAt: now,
+        releasedAt: now,
+        platformFeeAmount: String(feeAmount),
+        payoutAmount: String(payoutAmount),
+        payoutStatus: 'scheduled',
+        payoutScheduledAt: payoutScheduledFor(now),
+        updatedAt: now,
+      })
+      .where(eq(transactions.id, id))
+    await logEvent(id, me.id, 'delivered', 'Delivery confirmed by buyer')
+    await logEvent(
+      id,
+      null,
+      'released',
+      `Escrow released — payout of ${payoutAmount} scheduled after the cooling-off window`,
+    )
+    await notifyTransactionCompleted(
+      { ...tx, status: 'completed', payoutAmount: String(payoutAmount) },
+      me.id,
+    )
+    revalidatePath(`/dashboard/transactions/${id}`)
+    revalidatePath('/dashboard')
+  })
 }
 
 // --- Disputes -------------------------------------------------------------
@@ -532,65 +539,70 @@ export async function resolveDispute(
 ) {
   const me = await getSessionUser()
   await enforceRateLimit('money', me.id)
-  const [tx] = await db
-    .select()
-    .from(transactions)
-    .where(
-      and(eq(transactions.id, transactionId), eq(transactions.status, 'disputed')),
+
+  return db.transaction(async (dbtx) => {
+    const [tx] = await dbtx
+      .select()
+      .from(transactions)
+      .where(
+        and(eq(transactions.id, transactionId), eq(transactions.status, 'disputed')),
+      )
+      .for('update')
+      .limit(1)
+    if (!tx || !isParty(tx, me.id)) throw new Error('Not allowed')
+
+    const [openDispute] = await dbtx
+      .select()
+      .from(disputes)
+      .where(
+        and(
+          eq(disputes.transactionId, transactionId),
+          eq(disputes.status, 'open'),
+        ),
+      )
+      .for('update')
+      .limit(1)
+    if (!openDispute) throw new Error('No open dispute')
+
+    // Mutual-consent model: only the party who did NOT raise the dispute can
+    // concede to an outcome, mirroring a two-party settlement.
+    if (openDispute.raisedById === me.id)
+      throw new Error(
+        'The other party must agree to the resolution. You raised this dispute.',
+      )
+
+    const now = new Date()
+    await dbtx
+      .update(disputes)
+      .set({ status: 'resolved', resolution: outcome, resolvedAt: now, updatedAt: now })
+      .where(eq(disputes.id, openDispute.id))
+
+    await dbtx
+      .update(transactions)
+      .set({
+        status: outcome === 'release' ? 'completed' : 'refunded',
+        releasedAt: outcome === 'release' ? now : null,
+        updatedAt: now,
+      })
+      .where(eq(transactions.id, transactionId))
+
+    await logEvent(
+      transactionId,
+      me.id,
+      'dispute_resolved',
+      outcome === 'release'
+        ? 'Dispute settled — funds released to seller'
+        : 'Dispute settled — funds refunded to buyer',
     )
-    .limit(1)
-  if (!tx || !isParty(tx, me.id)) throw new Error('Not allowed')
-
-  const [openDispute] = await db
-    .select()
-    .from(disputes)
-    .where(
-      and(
-        eq(disputes.transactionId, transactionId),
-        eq(disputes.status, 'open'),
-      ),
+    await notifyDisputeResolved(
+      { ...tx, status: outcome === 'release' ? 'completed' : 'refunded' },
+      me.id,
+      outcome,
+      false,
     )
-    .limit(1)
-  if (!openDispute) throw new Error('No open dispute')
-
-  // Mutual-consent model: only the party who did NOT raise the dispute can
-  // concede to an outcome, mirroring a two-party settlement.
-  if (openDispute.raisedById === me.id)
-    throw new Error(
-      'The other party must agree to the resolution. You raised this dispute.',
-    )
-
-  const now = new Date()
-  await db
-    .update(disputes)
-    .set({ status: 'resolved', resolution: outcome, resolvedAt: now, updatedAt: now })
-    .where(eq(disputes.id, openDispute.id))
-
-  await db
-    .update(transactions)
-    .set({
-      status: outcome === 'release' ? 'completed' : 'refunded',
-      releasedAt: outcome === 'release' ? now : null,
-      updatedAt: now,
-    })
-    .where(eq(transactions.id, transactionId))
-
-  await logEvent(
-    transactionId,
-    me.id,
-    'dispute_resolved',
-    outcome === 'release'
-      ? 'Dispute settled — funds released to seller'
-      : 'Dispute settled — funds refunded to buyer',
-  )
-  await notifyDisputeResolved(
-    { ...tx, status: outcome === 'release' ? 'completed' : 'refunded' },
-    me.id,
-    outcome,
-    false,
-  )
-  revalidatePath(`/dashboard/transactions/${transactionId}`)
-  revalidatePath('/dashboard')
+    revalidatePath(`/dashboard/transactions/${transactionId}`)
+    revalidatePath('/dashboard')
+  })
 }
 
 // --- Reviews ---------------------------------------------------------------
