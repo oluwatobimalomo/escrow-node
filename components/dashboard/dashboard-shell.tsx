@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Menu, Plus, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SignOutButton } from '@/components/dashboard/sign-out-button'
+import { NotificationBell } from '@/components/dashboard/notification-bell'
 import { SidebarNav, MobileSidebarClose } from '@/components/dashboard/sidebar-nav'
 
 export function DashboardShell({
@@ -44,6 +45,7 @@ export function DashboardShell({
           </div>
 
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Button render={<Link href="/dashboard/new" />} size="sm">
               <Plus className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">New transaction</span>
