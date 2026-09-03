@@ -295,3 +295,19 @@ export const accountDeletionFeedback = pgTable('account_deletion_feedback', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 export type AccountDeletionFeedback = typeof accountDeletionFeedback.$inferSelect
+
+// --- Notifications -----------------------------------------------------
+// In-app notification feed, created alongside (not instead of) the email
+// sent by lib/notify.ts for the same event — so an event still surfaces in
+// the app even if the email never lands (bounced, spam-filtered, etc.).
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: text('userId').notNull(),
+  type: text('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message'),
+  link: text('link'),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+export type Notification = typeof notifications.$inferSelect
