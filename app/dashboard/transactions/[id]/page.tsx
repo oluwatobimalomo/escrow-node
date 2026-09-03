@@ -179,6 +179,14 @@ export default async function TransactionPage({
               </dd>
             </div>
           )}
+          {(tx.shippingCourier || tx.shippingTrackingNumber) && (
+            <div className="sm:col-span-2">
+              <dt className="text-sm text-muted-foreground">Shipping</dt>
+              <dd className="mt-0.5 text-sm leading-relaxed text-foreground">
+                {[tx.shippingCourier, tx.shippingTrackingNumber].filter(Boolean).join(' — ')}
+              </dd>
+            </div>
+          )}
           {tx.deliveryNote && (
             <div className="sm:col-span-2">
               <dt className="text-sm text-muted-foreground">Delivery note</dt>

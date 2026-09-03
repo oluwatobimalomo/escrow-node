@@ -125,6 +125,12 @@ export const transactions = pgTable('transactions', {
   listingId: text('listingId'),
   status: text('status').notNull().default('awaiting_acceptance'),
   deliveryNote: text('deliveryNote'),
+  // Structured shipping details, separate from the free-text deliveryNote
+  // above — lets a buyer actually track a package (via the courier's own
+  // site) instead of parsing a paragraph. Both optional: not every seller
+  // ships via a trackable courier (e.g. local hand-delivery).
+  shippingCourier: text('shippingCourier'),
+  shippingTrackingNumber: text('shippingTrackingNumber'),
   // Paystack transaction reference for the funding charge. Set when the
   // buyer initiates payment; used by the webhook/callback to identify which
   // transaction a verified charge belongs to.

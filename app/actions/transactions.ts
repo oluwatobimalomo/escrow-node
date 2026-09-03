@@ -481,9 +481,15 @@ export async function markFundedFromVerifiedPayment(reference: string) {
   })
 }
 
-export async function markShipped(id: string, note?: string) {
+export async function markShipped(
+  id: string,
+  options: { courier?: string; trackingNumber?: string; note?: string } = {},
+) {
   const me = await getSessionUser()
   await enforceRateLimit('general', me.id)
+  const courier = options.courier?.trim() || null
+  const trackingNumber = options.trackingNumber?.trim() || null
+  const note = options.note?.trim() || null
   const [tx] = await db
     .select()
     .from(transactions)
@@ -502,12 +508,26 @@ export async function markShipped(id: string, note?: string) {
     .set({
       status: 'shipped',
       shippedAt: new Date(),
-      deliveryNote: note?.trim() || null,
+      shippingCourier: courier,
+      shippingTrackingNumber: trackingNumber,
+      deliveryNote: note,
       updatedAt: new Date(),
     })
     .where(eq(transactions.id, id))
-  await logEvent(id, me.id, 'shipped', note?.trim() || undefined)
-  await notifyTransactionShipped({ ...tx, status: 'shipped' }, me.id)
+  const shippingSummary = [courier && `via ${courier}`, trackingNumber && `tracking ${trackingNumber}`]
+    .filter(Boolean)
+    .join(', ')
+  const eventNote = [shippingSummary, note].filter(Boolean).join(' — ') || undefined
+  await logEvent(id, me.id, 'shipped', eventNote)
+  await notifyTransactionShipped(
+    {
+      ...tx,
+      status: 'shipped',
+      shippingCourier: courier,
+      shippingTrackingNumber: trackingNumber,
+    },
+    me.id,
+  )
   revalidatePath(`/dashboard/transactions/${id}`)
   revalidatePath('/dashboard')
 }
