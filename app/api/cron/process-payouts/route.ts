@@ -4,7 +4,7 @@ import { transactions, payoutAccounts, user } from '@/lib/db/schema'
 import { initiateTransfer } from '@/lib/paystack'
 import { sendEmail } from '@/lib/email'
 import { notifyPayoutSent } from '@/lib/notify'
-import { autoReleaseStaleShipments } from '@/app/actions/transactions'
+import { autoReleaseStaleShipments, sendReviewReminders } from '@/app/actions/transactions'
 import { and, eq, isNotNull, lte } from 'drizzle-orm'
 import { randomUUID } from 'crypto'
 
@@ -27,6 +27,10 @@ export async function GET(request: Request) {
   // auto-completed is picked up by the payout query below in the same
   // run rather than waiting for tomorrow's cron.
   const autoReleaseResults = await autoReleaseStaleShipments()
+
+  // Nudge parties to leave a review a day or two after their transaction
+  // wrapped up, if they haven't already.
+  const reviewReminderResult = await sendReviewReminders()
 
   const due = await db
     .select()
@@ -108,6 +112,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     autoReleased: autoReleaseResults.filter((r) => r.outcome === 'released').length,
     autoReleaseResults,
+    reviewsReminded: reviewReminderResult.reminded,
     processed: results.length,
     results,
   })

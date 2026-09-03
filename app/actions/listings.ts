@@ -71,17 +71,18 @@ export async function getActiveListings() {
     getSellerRatings(sellerIds),
     sellerIds.length
       ? db
-          .select({ id: user.id, name: user.name })
+          .select({ id: user.id, name: user.name, bvnVerified: user.bvnVerified })
           .from(user)
           .where(inArray(user.id, sellerIds))
       : Promise.resolve([]),
   ])
-  const sellerNameById = new Map(sellers.map((s) => [s.id, s.name]))
+  const sellerById = new Map(sellers.map((s) => [s.id, s]))
 
   return listings.map((listing) => ({
     ...listing,
     sellerRating: ratings.get(listing.sellerId) ?? { avg: null, count: 0 },
-    sellerName: sellerNameById.get(listing.sellerId) ?? null,
+    sellerName: sellerById.get(listing.sellerId)?.name ?? null,
+    sellerVerified: sellerById.get(listing.sellerId)?.bvnVerified ?? false,
   }))
 }
 
@@ -94,7 +95,12 @@ export async function getListing(id: string) {
   if (!listing) return null
 
   const [seller] = await db
-    .select({ id: user.id, name: user.name, image: user.image })
+    .select({
+      id: user.id,
+      name: user.name,
+      image: user.image,
+      bvnVerified: user.bvnVerified,
+    })
     .from(user)
     .where(eq(user.id, listing.sellerId))
     .limit(1)

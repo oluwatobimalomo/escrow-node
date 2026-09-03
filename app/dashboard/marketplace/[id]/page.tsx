@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation'
 import { getListing } from '@/app/actions/listings'
 import { BuyListingButton } from '@/components/dashboard/buy-listing-button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { formatNaira } from '@/lib/escrow'
-import { ImageOff } from 'lucide-react'
+import { BadgeCheck, ImageOff } from 'lucide-react'
 
 export default async function ListingDetailPage({
   params,
@@ -55,6 +56,11 @@ export default async function ListingDetailPage({
             <AvatarFallback>{listing.seller.name.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           Sold by {listing.seller.name}
+          {listing.seller.bvnVerified && (
+            <Badge className="gap-1">
+              <BadgeCheck className="size-3" aria-hidden="true" /> ID verified
+            </Badge>
+          )}
         </div>
       )}
 

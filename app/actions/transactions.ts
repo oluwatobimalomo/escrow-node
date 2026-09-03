@@ -22,8 +22,9 @@ import {
   notifyTransactionCancelled,
   notifyDisputeRaised,
   notifyDisputeResolved,
+  notifyReviewReminder,
 } from '@/lib/notify'
-import { and, desc, eq, inArray, lte, or, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
@@ -739,6 +740,105 @@ export async function resolveDispute(
 }
 
 // --- Reviews ---------------------------------------------------------------
+
+const REVIEW_REMINDER_WINDOW_START_HOURS = 48
+const REVIEW_REMINDER_WINDOW_END_HOURS = 24
+
+/**
+ * Nudges each party to leave a review 24-48 hours after their transaction
+ * reached a terminal state (completed or refunded), if they haven't
+ * already. Called from the daily payouts cron. The 24-48h window (rather
+ * than a single instant) is sized to the cron's own once-a-day cadence,
+ * so a transaction is guaranteed to be caught exactly once as it crosses
+ * the 24h mark even if the cron's actual run time drifts slightly day to
+ * day.
+ *
+ * Idempotency: rather than a new schema column, this reuses
+ * transactionEvents — logging a 'review_reminder_sent' event with actorId
+ * set to the person who WAS reminded (not the person who triggered the
+ * event, unlike every other event in this file) lets a re-scan skip
+ * anyone already nudged for a given transaction.
+ */
+export async function sendReviewReminders() {
+  const windowStart = new Date(
+    Date.now() - REVIEW_REMINDER_WINDOW_START_HOURS * 60 * 60 * 1000,
+  )
+  const windowEnd = new Date(
+    Date.now() - REVIEW_REMINDER_WINDOW_END_HOURS * 60 * 60 * 1000,
+  )
+
+  const candidates = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        or(eq(transactions.status, 'completed'), eq(transactions.status, 'refunded')),
+        gte(transactions.updatedAt, windowStart),
+        lte(transactions.updatedAt, windowEnd),
+      ),
+    )
+
+  if (candidates.length === 0) return { reminded: 0 }
+
+  const txIds = candidates.map((t) => t.id)
+  const userIds = new Set<string>()
+  for (const t of candidates) {
+    if (t.buyerId) userIds.add(t.buyerId)
+    if (t.sellerId) userIds.add(t.sellerId)
+  }
+
+  const [existingReviews, existingReminders, people] = await Promise.all([
+    db
+      .select({ transactionId: reviews.transactionId, reviewerId: reviews.reviewerId })
+      .from(reviews)
+      .where(inArray(reviews.transactionId, txIds)),
+    db
+      .select({
+        transactionId: transactionEvents.transactionId,
+        actorId: transactionEvents.actorId,
+      })
+      .from(transactionEvents)
+      .where(
+        and(
+          inArray(transactionEvents.transactionId, txIds),
+          eq(transactionEvents.type, 'review_reminder_sent'),
+        ),
+      ),
+    userIds.size
+      ? db
+          .select({ id: user.id, name: user.name, email: user.email })
+          .from(user)
+          .where(inArray(user.id, [...userIds]))
+      : Promise.resolve([]),
+  ])
+
+  const reviewedKey = new Set(existingReviews.map((r) => `${r.transactionId}:${r.reviewerId}`))
+  const remindedKey = new Set(
+    existingReminders.filter((r) => r.actorId).map((r) => `${r.transactionId}:${r.actorId}`),
+  )
+  const byId = new Map(people.map((p) => [p.id, p]))
+
+  let reminded = 0
+  for (const tx of candidates) {
+    const parties: { userId: string | null; counterpartyId: string | null }[] = [
+      { userId: tx.buyerId, counterpartyId: tx.sellerId },
+      { userId: tx.sellerId, counterpartyId: tx.buyerId },
+    ]
+    for (const { userId, counterpartyId } of parties) {
+      if (!userId) continue
+      const key = `${tx.id}:${userId}`
+      if (reviewedKey.has(key) || remindedKey.has(key)) continue
+      const recipient = byId.get(userId)
+      if (!recipient) continue
+      const counterparty = counterpartyId ? byId.get(counterpartyId) : undefined
+      await notifyReviewReminder(tx, recipient.email, counterparty?.name ?? null)
+      await logEvent(tx.id, userId, 'review_reminder_sent')
+      reminded += 1
+    }
+  }
+
+  return { reminded }
+}
 
 export async function submitReview(
   transactionId: string,

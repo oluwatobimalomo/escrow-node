@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { formatNaira } from '@/lib/escrow'
-import { ImageOff, Star } from 'lucide-react'
+import { BadgeCheck, ImageOff, Star } from 'lucide-react'
 import type { ProductListing } from '@/lib/db/schema'
 
 type ListingWithRating = ProductListing & {
   sellerRating?: { avg: number | null; count: number }
   sellerName?: string | null
+  sellerVerified?: boolean
 }
 
 export function ListingCard({ listing }: { listing: ListingWithRating }) {
@@ -33,7 +34,15 @@ export function ListingCard({ listing }: { listing: ListingWithRating }) {
           {(listing.sellerName || (rating && rating.count > 0)) && (
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               {listing.sellerName && (
-                <span className="truncate">{listing.sellerName}</span>
+                <span className="flex min-w-0 items-center gap-0.5">
+                  <span className="truncate">{listing.sellerName}</span>
+                  {listing.sellerVerified && (
+                    <BadgeCheck
+                      className="size-3 shrink-0 text-primary"
+                      aria-label="ID verified"
+                    />
+                  )}
+                </span>
               )}
               {rating && rating.count > 0 && (
                 <span className="flex shrink-0 items-center gap-0.5">

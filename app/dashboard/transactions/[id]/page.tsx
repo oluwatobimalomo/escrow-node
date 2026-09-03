@@ -25,6 +25,8 @@ const EVENT_LABELS: Record<string, string> = {
   dispute_resolved: 'Dispute resolved',
   cancelled: 'Transaction cancelled',
   reviewed: 'Review submitted',
+  auto_released: 'Escrow auto-released',
+  review_reminder_sent: 'Review reminder sent',
 }
 
 export default async function TransactionPage({
