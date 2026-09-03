@@ -23,6 +23,7 @@ import {
   notifyDisputeRaised,
   notifyDisputeResolved,
   notifyReviewReminder,
+  createNotification,
 } from '@/lib/notify'
 import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
@@ -852,6 +853,12 @@ export async function sendReviewReminders() {
       if (!recipient) continue
       const counterparty = counterpartyId ? byId.get(counterpartyId) : undefined
       await notifyReviewReminder(tx, recipient.email, counterparty?.name ?? null)
+      await createNotification({
+        userId,
+        type: 'review_reminder',
+        title: `How did it go with ${counterparty?.name ?? 'the other party'}?`,
+        link: `/dashboard/transactions/${tx.id}`,
+      })
       await logEvent(tx.id, userId, 'review_reminder_sent')
       reminded += 1
     }

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { user, transactions } from '@/lib/db/schema'
+import { user, transactions, notifications } from '@/lib/db/schema'
 import { sendEmail, emailLogoHeader } from '@/lib/email'
 import { formatNaira } from '@/lib/escrow'
 import { eq, inArray } from 'drizzle-orm'
@@ -72,23 +72,65 @@ async function partiesOf(tx: TxRow) {
     .where(inArray(user.id, ids))
 }
 
-/** Sends to every known party on the transaction except the actor who triggered the event, if given. */
+/**
+ * Records an in-app notification row. Called alongside (never instead of)
+ * an email send, so an event still surfaces in the app's notification bell
+ * even if the email bounces, lands in spam, or Resend has a bad day —
+ * something this project has hit locally more than once.
+ */
+export async function createNotification({
+  userId,
+  type,
+  title,
+  message,
+  link,
+}: {
+  userId: string
+  type: string
+  title: string
+  message?: string | null
+  link?: string | null
+}) {
+  try {
+    await db.insert(notifications).values({
+      userId,
+      type,
+      title,
+      message: message ?? null,
+      link: link ?? null,
+    })
+  } catch (err) {
+    console.error('createNotification failed:', err)
+  }
+}
+
+/**
+ * Sends to every known party on the transaction except the actor who
+ * triggered the event, if given — both by email and as an in-app
+ * notification (notificationType is the short slug shown/filterable in
+ * the notification bell, e.g. 'funded', 'shipped').
+ */
 async function notifyParties(
   tx: TxRow,
   actorId: string | null,
   subject: string,
   html: string,
+  notificationType: string,
 ) {
   try {
     const parties = await partiesOf(tx)
     const recipients = parties.filter((p) => p.id !== actorId)
-    await Promise.all(
-      recipients.map((p) =>
+    const link = `/dashboard/transactions/${tx.id}`
+    await Promise.all([
+      ...recipients.map((p) =>
         sendEmail({ to: p.email, subject, html }).catch((err) =>
           console.error(`Notification email failed for ${p.email}:`, err),
         ),
       ),
-    )
+      ...recipients.map((p) =>
+        createNotification({ userId: p.id, type: notificationType, title: subject, link }),
+      ),
+    ])
   } catch (err) {
     // Notifications are best-effort — a failure here should never surface
     // to the person performing the underlying action.
@@ -126,6 +168,7 @@ export async function notifyListingPurchased(tx: TxRow) {
       'Your listing sold',
       `<p style="color:#444;line-height:1.5;">Someone bought "${tx.title}" from your listing for ${formatNaira(tx.amount)}. It's ready to be funded — once that happens you can ship it.</p>`,
     ),
+    'listing_sold',
   )
 }
 
@@ -139,6 +182,7 @@ export async function notifyTransactionAccepted(tx: TxRow, actorId: string) {
       'Terms accepted',
       `<p style="color:#444;line-height:1.5;">The other party accepted "${tx.title}". Next step: the buyer funds the escrow.</p>`,
     ),
+    'accepted',
   )
 }
 
@@ -152,6 +196,7 @@ export async function notifyTransactionFunded(tx: TxRow) {
       'Funds secured in escrow',
       `<p style="color:#444;line-height:1.5;">${formatNaira(tx.amount)} is now held in escrow for "${tx.title}". The seller can proceed with shipping/delivery.</p>`,
     ),
+    'funded',
   )
 }
 
@@ -175,6 +220,7 @@ export async function notifyTransactionShipped(tx: TxRow, actorId: string) {
       'Item marked as shipped',
       `<p style="color:#444;line-height:1.5;">The seller marked "${tx.title}" as shipped. Confirm delivery once you receive it to release the funds.</p>${shippingLine}`,
     ),
+    'shipped',
   )
 }
 
@@ -188,6 +234,7 @@ export async function notifyTransactionCompleted(tx: TxRow, actorId: string | nu
       'Delivery confirmed, funds released',
       `<p style="color:#444;line-height:1.5;">Delivery for "${tx.title}" was confirmed and the escrow has been released. Payout amount: ${tx.payoutAmount ? formatNaira(tx.payoutAmount) : formatNaira(tx.amount)}.</p>`,
     ),
+    'completed',
   )
 }
 
@@ -201,6 +248,7 @@ export async function notifyTransactionCancelled(tx: TxRow, actorId: string) {
       'Transaction cancelled',
       `<p style="color:#444;line-height:1.5;">"${tx.title}" was cancelled before funding.</p>`,
     ),
+    'cancelled',
   )
 }
 
@@ -214,6 +262,7 @@ export async function notifyDisputeRaised(tx: TxRow, actorId: string, reason: st
       'A dispute has been raised',
       `<p style="color:#444;line-height:1.5;">A dispute was raised on "${tx.title}": <em>${reason}</em>. Funds are on hold until it's resolved.</p>`,
     ),
+    'disputed',
   )
 }
 
@@ -238,6 +287,7 @@ export async function notifyDisputeResolved(
       'Dispute resolved',
       `<p style="color:#444;line-height:1.5;">The dispute on "${tx.title}" was resolved${isAdminForced ? ' by an administrator' : ' by mutual agreement'}: ${outcomeText}.</p>`,
     ),
+    'dispute_resolved',
   )
 }
 
@@ -258,6 +308,12 @@ export async function notifyPayoutSent(tx: TxRow) {
       `<p style="color:#444;line-height:1.5;">${tx.payoutAmount ? formatNaira(tx.payoutAmount) : ''} has been sent to your bank account for "${tx.title}".</p>`,
     ),
   }).catch((err) => console.error('Payout notification failed:', err))
+  await createNotification({
+    userId: tx.sellerId,
+    type: 'payout_sent',
+    title: `Payout sent — ${tx.title}`,
+    link: `/dashboard/transactions/${tx.id}`,
+  })
 }
 
 /**
