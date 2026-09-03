@@ -1,21 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ListingCard } from '@/components/dashboard/listing-card'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
+import { LISTING_CATEGORIES } from '@/lib/listing-categories'
+import { cn } from '@/lib/utils'
 import type { ProductListing } from '@/lib/db/schema'
 
 type ListingWithRating = ProductListing & {
   sellerRating?: { avg: number | null; count: number }
+  sellerName?: string | null
+  sellerVerified?: boolean
 }
 
 export function MarketplaceBrowser({ listings }: { listings: ListingWithRating[] }) {
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<string>('all')
+
+  const availableCategories = useMemo(() => {
+    const present = new Set(listings.map((l) => l.category ?? 'other'))
+    return LISTING_CATEGORIES.filter((c) => present.has(c.value))
+  }, [listings])
+
   const trimmed = query.trim().toLowerCase()
-  const filtered = trimmed
-    ? listings.filter((l) => l.title.toLowerCase().includes(trimmed))
-    : listings
+  const filtered = listings.filter((l) => {
+    const matchesQuery = !trimmed || l.title.toLowerCase().includes(trimmed)
+    const matchesCategory = category === 'all' || (l.category ?? 'other') === category
+    return matchesQuery && matchesCategory
+  })
 
   return (
     <div className="flex flex-col gap-4">
@@ -33,9 +46,41 @@ export function MarketplaceBrowser({ listings }: { listings: ListingWithRating[]
         />
       </div>
 
+      {availableCategories.length > 1 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by category">
+          <button
+            type="button"
+            onClick={() => setCategory('all')}
+            className={cn(
+              'rounded-full border px-2.5 py-1 text-xs transition-colors',
+              category === 'all'
+                ? 'border-primary bg-accent text-accent-foreground'
+                : 'border-border bg-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            All
+          </button>
+          {availableCategories.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => setCategory(c.value)}
+              className={cn(
+                'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                category === c.value
+                  ? 'border-primary bg-accent text-accent-foreground'
+                  : 'border-border bg-transparent text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {filtered.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          No listings match &ldquo;{query}&rdquo;.
+          {trimmed ? `No listings match \u201c${query}\u201d.` : 'No listings in this category.'}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

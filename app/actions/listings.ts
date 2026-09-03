@@ -7,6 +7,7 @@ import { generateTransactionCode } from '@/lib/escrow'
 import { logEvent } from '@/app/actions/transactions'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { notifyListingPurchased } from '@/lib/notify'
+import { isValidCategory } from '@/lib/listing-categories'
 import { and, desc, eq, gt, inArray, ne, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
@@ -128,10 +129,12 @@ export async function createListing(input: {
   image?: string
   price: number
   quantity: number
+  category?: string
 }) {
   const me = await getSessionUser()
   await enforceRateLimit('general', me.id)
   const title = input.title.trim()
+  const category = input.category && isValidCategory(input.category) ? input.category : 'other'
 
   if (!title) throw new Error('Title is required')
   if (!Number.isFinite(input.price) || input.price <= 0)
@@ -157,6 +160,7 @@ export async function createListing(input: {
     image: input.image || null,
     price: input.price.toFixed(2),
     quantity: input.quantity,
+    category,
   })
   revalidatePath('/dashboard/listings')
   revalidatePath('/dashboard/marketplace')
@@ -172,6 +176,7 @@ export async function updateListing(
     price: number
     quantity: number
     active: boolean
+    category?: string
   },
 ) {
   const me = await getSessionUser()
@@ -184,6 +189,7 @@ export async function updateListing(
   if (listing.sellerId !== me.id) throw new Error('Not your listing')
 
   const title = input.title.trim()
+  const category = input.category && isValidCategory(input.category) ? input.category : listing.category
   if (!title) throw new Error('Title is required')
   if (!Number.isFinite(input.price) || input.price <= 0)
     throw new Error('Price must be greater than zero')
@@ -204,6 +210,7 @@ export async function updateListing(
       price: input.price.toFixed(2),
       quantity: input.quantity,
       active: input.active,
+      category,
       updatedAt: new Date(),
     })
     .where(eq(productListings.id, id))

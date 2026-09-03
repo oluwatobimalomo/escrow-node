@@ -9,6 +9,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { LISTING_CATEGORIES } from '@/lib/listing-categories'
 import { cn } from '@/lib/utils'
 import { ImagePlus, X } from 'lucide-react'
 import type { ProductListing } from '@/lib/db/schema'
@@ -22,6 +30,7 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
   const [description, setDescription] = useState(existing?.description ?? '')
   const [price, setPrice] = useState(existing ? existing.price : '')
   const [quantity, setQuantity] = useState(existing ? String(existing.quantity) : '1')
+  const [category, setCategory] = useState(existing?.category ?? 'other')
   const [active, setActive] = useState(existing?.active ?? true)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(existing?.image ?? null)
@@ -61,6 +70,7 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
           price: Number.parseFloat(price),
           quantity: Number.parseInt(quantity, 10),
           active,
+          category,
         })
         router.push('/dashboard/listings')
       } else {
@@ -70,6 +80,7 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
           image,
           price: Number.parseFloat(price),
           quantity: Number.parseInt(quantity, 10),
+          category,
         })
         router.push(`/dashboard/marketplace/${id}`)
       }
@@ -148,6 +159,22 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
           className="sr-only"
           onChange={(e) => handleImageSelect(e.target.files?.[0] ?? null)}
         />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="listing-category">Category</Label>
+        <Select value={category} onValueChange={(value) => setCategory(value ?? 'other')}>
+          <SelectTrigger id="listing-category" className="w-full">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            {LISTING_CATEGORIES.map((c) => (
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
