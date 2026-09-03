@@ -68,6 +68,8 @@ export function TransactionActions({
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [shipNote, setShipNote] = useState('')
+  const [shipCourier, setShipCourier] = useState('')
+  const [shipTrackingNumber, setShipTrackingNumber] = useState('')
   const [disputeReason, setDisputeReason] = useState('')
   const [disputeDetails, setDisputeDetails] = useState('')
   const [disputeOpen, setDisputeOpen] = useState(false)
@@ -202,9 +204,36 @@ export function TransactionActions({
           <DialogHeader>
             <DialogTitle>Mark as shipped</DialogTitle>
             <DialogDescription>
-              Add delivery details so the buyer knows what to expect.
+              Add shipping details so the buyer can track their delivery.
             </DialogDescription>
           </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="ship-courier">
+                Courier <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="ship-courier"
+                value={shipCourier}
+                onChange={(e) => setShipCourier(e.target.value)}
+                maxLength={80}
+                placeholder="e.g. GIGL, DHL, Speedaf"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="ship-tracking">
+                Tracking number{' '}
+                <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="ship-tracking"
+                value={shipTrackingNumber}
+                onChange={(e) => setShipTrackingNumber(e.target.value)}
+                maxLength={80}
+                placeholder="e.g. GIGL-1029384756"
+              />
+            </div>
+          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="ship-note">
               Delivery note{' '}
@@ -216,13 +245,22 @@ export function TransactionActions({
               onChange={(e) => setShipNote(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="Courier, tracking number, expected arrival..."
+              placeholder="Expected arrival, drop-off instructions..."
             />
           </div>
           <DialogFooter>
             <Button
               onClick={async () => {
-                await run('ship', () => markShipped(transactionId, shipNote), 'Marked as shipped')
+                await run(
+                  'ship',
+                  () =>
+                    markShipped(transactionId, {
+                      courier: shipCourier,
+                      trackingNumber: shipTrackingNumber,
+                      note: shipNote,
+                    }),
+                  'Marked as shipped',
+                )
                 setShipOpen(false)
               }}
               disabled={pending !== null}

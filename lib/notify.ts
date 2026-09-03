@@ -156,6 +156,16 @@ export async function notifyTransactionFunded(tx: TxRow) {
 }
 
 export async function notifyTransactionShipped(tx: TxRow, actorId: string) {
+  const shippingLine =
+    tx.shippingCourier || tx.shippingTrackingNumber
+      ? `<p style="color:#444;line-height:1.5;">${
+          tx.shippingCourier ? `Courier: <strong>${tx.shippingCourier}</strong>. ` : ''
+        }${
+          tx.shippingTrackingNumber
+            ? `Tracking number: <strong>${tx.shippingTrackingNumber}</strong>.`
+            : ''
+        }</p>`
+      : ''
   await notifyParties(
     tx,
     actorId,
@@ -163,7 +173,7 @@ export async function notifyTransactionShipped(tx: TxRow, actorId: string) {
     shell(
       tx,
       'Item marked as shipped',
-      `<p style="color:#444;line-height:1.5;">The seller marked "${tx.title}" as shipped. Confirm delivery once you receive it to release the funds.</p>`,
+      `<p style="color:#444;line-height:1.5;">The seller marked "${tx.title}" as shipped. Confirm delivery once you receive it to release the funds.</p>${shippingLine}`,
     ),
   )
 }
