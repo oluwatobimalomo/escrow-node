@@ -13,7 +13,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.paystack.co https://*.vercel-insights.com",
+      "connect-src 'self' https://api.paystack.co https://*.vercel-insights.com https://vercel.com",
       "frame-src 'self' https://checkout.paystack.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
