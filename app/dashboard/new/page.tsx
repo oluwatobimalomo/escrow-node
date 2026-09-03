@@ -1,6 +1,8 @@
+import { getRecentCounterparties } from '@/app/actions/transactions'
 import { NewTransactionForm } from '@/components/dashboard/new-transaction-form'
 
-export default function NewTransactionPage() {
+export default async function NewTransactionPage() {
+  const recentCounterparties = await getRecentCounterparties()
   return (
     <div className="mx-auto max-w-xl">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -11,7 +13,7 @@ export default function NewTransactionPage() {
         both sides accept.
       </p>
       <div className="mt-6">
-        <NewTransactionForm />
+        <NewTransactionForm recentCounterparties={recentCounterparties} />
       </div>
     </div>
   )
