@@ -15,7 +15,11 @@ import { getFeeTier } from '@/lib/payout'
 import { formatNaira } from '@/lib/escrow'
 import { ImagePlus, ShoppingBag, Store, X } from 'lucide-react'
 
-export function NewTransactionForm() {
+export function NewTransactionForm({
+  recentCounterparties = [],
+}: {
+  recentCounterparties?: { email: string; name: string | null }[]
+} = {}) {
   const router = useRouter()
   const { data: session } = useSession()
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer')
@@ -209,6 +213,20 @@ export function NewTransactionForm() {
           <Label htmlFor="counterparty">
             {role === 'buyer' ? "Seller's email" : "Buyer's email"}
           </Label>
+          {recentCounterparties.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {recentCounterparties.map((person) => (
+                <button
+                  key={person.email}
+                  type="button"
+                  onClick={() => setCounterpartyEmail(person.email)}
+                  className="rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-xs text-foreground transition-colors hover:border-ring/40 hover:bg-secondary"
+                >
+                  {person.name ?? person.email}
+                </button>
+              ))}
+            </div>
+          )}
           <Input
             id="counterparty"
             type="email"

@@ -23,7 +23,7 @@ import {
   notifyDisputeRaised,
   notifyDisputeResolved,
 } from '@/lib/notify'
-import { and, desc, eq, lte, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, lte, or, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
@@ -229,6 +229,70 @@ export async function getPayoutHistory() {
       ),
     )
     .orderBy(desc(transactions.payoutScheduledAt))
+}
+
+/**
+ * Up to 5 people you've recently transacted with (as either buyer or
+ * seller), most recent first — powers the "recent counterparties"
+ * quick-pick on the new-transaction form. Resolves the actual other
+ * party's email via their user record when you accepted someone else's
+ * invite, since `counterpartyEmail` held YOUR OWN email in that case while
+ * the invite was pending (see acceptTransaction) — it's only the other
+ * party's email when you were the one who created the invite.
+ */
+export async function getRecentCounterparties() {
+  const me = await getSessionUser()
+  const rows = await db
+    .select({
+      creatorId: transactions.creatorId,
+      buyerId: transactions.buyerId,
+      sellerId: transactions.sellerId,
+      counterpartyEmail: transactions.counterpartyEmail,
+    })
+    .from(transactions)
+    .where(
+      or(
+        eq(transactions.creatorId, me.id),
+        eq(transactions.buyerId, me.id),
+        eq(transactions.sellerId, me.id),
+      ),
+    )
+    .orderBy(desc(transactions.createdAt))
+    .limit(50) // cap the scan — recency is all that matters here
+
+  const otherUserIds = new Set<string>()
+  for (const r of rows) {
+    if (r.creatorId !== me.id) {
+      const otherId = r.buyerId === me.id ? r.sellerId : r.buyerId
+      if (otherId) otherUserIds.add(otherId)
+    }
+  }
+  const otherUsers = otherUserIds.size
+    ? await db
+        .select({ id: user.id, name: user.name, email: user.email })
+        .from(user)
+        .where(inArray(user.id, [...otherUserIds]))
+    : []
+  const byId = new Map(otherUsers.map((u) => [u.id, u]))
+
+  const seen = new Map<string, { email: string; name: string | null }>()
+  for (const r of rows) {
+    let email: string | null = null
+    let name: string | null = null
+    if (r.creatorId === me.id) {
+      email = r.counterpartyEmail
+    } else {
+      const otherId = r.buyerId === me.id ? r.sellerId : r.buyerId
+      const otherUser = otherId ? byId.get(otherId) : undefined
+      email = otherUser?.email ?? null
+      name = otherUser?.name ?? null
+    }
+    if (!email) continue
+    const key = email.toLowerCase()
+    if (!seen.has(key)) seen.set(key, { email, name }) // rows are already newest-first
+  }
+
+  return [...seen.values()].slice(0, 5)
 }
 
 // --- Lifecycle actions ---------------------------------------------------
