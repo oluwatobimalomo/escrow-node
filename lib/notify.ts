@@ -249,3 +249,27 @@ export async function notifyPayoutSent(tx: TxRow) {
     ),
   }).catch((err) => console.error('Payout notification failed:', err))
 }
+
+/**
+ * One-time nudge to a single party (not both — see sendReviewReminders in
+ * app/actions/transactions.ts, which decides who still needs one) a day
+ * or two after their transaction wrapped up, if they haven't left a
+ * review yet. Sent directly to a specific recipient rather than through
+ * notifyParties, since only one side may need the nudge.
+ */
+export async function notifyReviewReminder(
+  tx: TxRow,
+  recipientEmail: string,
+  counterpartyName: string | null,
+) {
+  const counterpartyLabel = counterpartyName ?? 'the other party'
+  await sendEmail({
+    to: recipientEmail,
+    subject: `How did it go with ${counterpartyLabel}?`,
+    html: shell(
+      tx,
+      'Leave a review',
+      `<p style="color:#444;line-height:1.5;">Your transaction "${tx.title}" wrapped up recently. Leaving a quick review for ${counterpartyLabel} helps other buyers and sellers trust TrustLock.</p>`,
+    ),
+  }).catch((err) => console.error('Review reminder email failed:', err))
+}
