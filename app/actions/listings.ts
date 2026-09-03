@@ -66,10 +66,22 @@ export async function getActiveListings() {
     )
     .orderBy(desc(productListings.createdAt))
 
-  const ratings = await getSellerRatings([...new Set(listings.map((l) => l.sellerId))])
+  const sellerIds = [...new Set(listings.map((l) => l.sellerId))]
+  const [ratings, sellers] = await Promise.all([
+    getSellerRatings(sellerIds),
+    sellerIds.length
+      ? db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(inArray(user.id, sellerIds))
+      : Promise.resolve([]),
+  ])
+  const sellerNameById = new Map(sellers.map((s) => [s.id, s.name]))
+
   return listings.map((listing) => ({
     ...listing,
     sellerRating: ratings.get(listing.sellerId) ?? { avg: null, count: 0 },
+    sellerName: sellerNameById.get(listing.sellerId) ?? null,
   }))
 }
 

@@ -6,6 +6,7 @@ import type { ProductListing } from '@/lib/db/schema'
 
 type ListingWithRating = ProductListing & {
   sellerRating?: { avg: number | null; count: number }
+  sellerName?: string | null
 }
 
 export function ListingCard({ listing }: { listing: ListingWithRating }) {
@@ -29,10 +30,17 @@ export function ListingCard({ listing }: { listing: ListingWithRating }) {
           <p className="font-mono text-sm font-semibold text-foreground">
             {formatNaira(listing.price)}
           </p>
-          {rating && rating.count > 0 && (
+          {(listing.sellerName || (rating && rating.count > 0)) && (
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Star className="size-3 fill-warning text-warning" aria-hidden="true" />
-              {rating.avg?.toFixed(1)} ({rating.count})
+              {listing.sellerName && (
+                <span className="truncate">{listing.sellerName}</span>
+              )}
+              {rating && rating.count > 0 && (
+                <span className="flex shrink-0 items-center gap-0.5">
+                  <Star className="size-3 fill-warning text-warning" aria-hidden="true" />
+                  {rating.avg?.toFixed(1)} ({rating.count})
+                </span>
+              )}
             </p>
           )}
           {listing.quantity <= 3 && (
