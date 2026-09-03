@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { formatNaira } from '@/lib/escrow'
 import { BadgeCheck, ImageOff, Star } from 'lucide-react'
+import { categoryLabel } from '@/lib/listing-categories'
 import type { ProductListing } from '@/lib/db/schema'
 
 type ListingWithRating = ProductListing & {
@@ -15,17 +16,24 @@ export function ListingCard({ listing }: { listing: ListingWithRating }) {
   return (
     <Link href={`/dashboard/marketplace/${listing.id}`}>
       <Card className="h-full gap-0 overflow-hidden p-0 transition-shadow hover:shadow-md">
-        {listing.image ? (
-          <img
-            src={listing.image}
-            alt={listing.title}
-            className="aspect-square w-full object-cover"
-          />
-        ) : (
-          <div className="flex aspect-square w-full items-center justify-center bg-muted">
-            <ImageOff className="size-8 text-muted-foreground" aria-hidden="true" />
-          </div>
-        )}
+        <div className="relative">
+          {listing.image ? (
+            <img
+              src={listing.image}
+              alt={listing.title}
+              className="aspect-square w-full object-cover"
+            />
+          ) : (
+            <div className="flex aspect-square w-full items-center justify-center bg-muted">
+              <ImageOff className="size-8 text-muted-foreground" aria-hidden="true" />
+            </div>
+          )}
+          {listing.category && (
+            <span className="absolute top-2 left-2 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-medium text-foreground shadow-sm">
+              {categoryLabel(listing.category)}
+            </span>
+          )}
+        </div>
         <div className="flex flex-col gap-1 p-3">
           <p className="truncate font-medium text-card-foreground">{listing.title}</p>
           <p className="font-mono text-sm font-semibold text-foreground">

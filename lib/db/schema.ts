@@ -243,6 +243,10 @@ export const productListings = pgTable('product_listings', {
   image: text('image'),
   price: numeric('price', { precision: 14, scale: 2 }).notNull(),
   currency: text('currency').notNull().default('NGN'),
+  // One of the slugs in lib/listing-categories.ts. Plain text rather than
+  // a DB enum so the category list can change without a migration --
+  // validated against the allowed list in app/actions/listings.ts instead.
+  category: text('category').notNull().default('other'),
   // Remaining stock. A purchase atomically decrements this (see
   // buyFromListing in app/actions/listings.ts) to avoid overselling under
   // concurrent buyers.
