@@ -92,6 +92,13 @@
       "when": 1788525501313,
       "tag": "0012_easy_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788527095628,
+      "tag": "0013_safe_power_man",
+      "breakpoints": true
     }
   ]
 }
