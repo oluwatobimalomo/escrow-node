@@ -315,3 +315,16 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 export type Notification = typeof notifications.$inferSelect
+
+// --- Transaction messages ---------------------------------------------------
+// Threaded chat between the two parties on a transaction, separate from
+// the dispute reason/details fields -- for ordinary coordination (delivery
+// address, timing, etc.) rather than a formal dispute record.
+export const transactionMessages = pgTable('transaction_messages', {
+  id: text('id').primaryKey(),
+  transactionId: text('transactionId').notNull(),
+  senderId: text('senderId').notNull(),
+  body: text('body').notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+export type TransactionMessage = typeof transactionMessages.$inferSelect

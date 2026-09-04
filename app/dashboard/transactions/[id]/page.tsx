@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { StatusBadge } from '@/components/dashboard/status-badge'
 import { TransactionActions } from '@/components/dashboard/transaction-actions'
 import { TransactionStepper } from '@/components/dashboard/transaction-stepper'
+import { TransactionMessages } from '@/components/dashboard/transaction-messages'
 import { getFeeTier } from '@/lib/payout'
 import { ArrowLeft, Star } from 'lucide-react'
 
@@ -212,6 +213,10 @@ export default async function TransactionPage({
           defaultEmail={me.email}
         />
       </div>
+
+      {myRole !== 'invited' && (
+        <TransactionMessages transactionId={tx.id} meId={me.id} />
+      )}
 
       {openDispute && (
         <Card className="mt-6 gap-2 border-destructive/40 p-5">
