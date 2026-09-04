@@ -1,6 +1,7 @@
 import { getMyProfile } from '@/app/actions/profile'
 import { ProfileForm } from '@/components/dashboard/profile-form'
 import { ChangePasswordForm } from '@/components/dashboard/change-password-form'
+import { TwoFactorSection } from '@/components/dashboard/two-factor-section'
 import { ReputationSummary } from '@/components/dashboard/reputation-summary'
 import { BvnVerificationForm } from '@/components/dashboard/bvn-verification-form'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
@@ -141,6 +142,16 @@ export default async function ProfilePage() {
           <ChangePasswordForm />
         </Card>
       )}
+
+      <Card className="p-5">
+        <h2 className="text-lg font-medium text-foreground mb-4">
+          Two-factor authentication
+        </h2>
+        <TwoFactorSection
+          enabled={Boolean(profile.twoFactorEnabled)}
+          hasPassword={profile.hasPassword}
+        />
+      </Card>
 
       <DeleteAccountSection hasPassword={profile.hasPassword} />
     </div>

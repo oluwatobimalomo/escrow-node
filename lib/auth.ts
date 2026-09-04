@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { siwe, admin } from 'better-auth/plugins'
+import { siwe, admin, twoFactor } from 'better-auth/plugins'
 import { generateRandomString } from 'better-auth/crypto'
 import { verifyMessage } from 'viem'
 import { pool } from '@/lib/db'
@@ -126,6 +126,9 @@ export const auth = betterAuth({
     admin({
       defaultRole: 'user',
       adminRoles: ['admin'],
+    }),
+    twoFactor({
+      issuer: 'TrustLock',
     }),
     siwe({
       domain: resolveDomain(),
