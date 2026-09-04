@@ -85,6 +85,13 @@
       "when": 1788446853850,
       "tag": "0011_smooth_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788525501313,
+      "tag": "0012_easy_yellowjacket",
+      "breakpoints": true
     }
   ]
 }
