@@ -69,6 +69,16 @@ export default async function TransactionPage({
         <StatusBadge status={tx.status} />
       </div>
 
+      {['funded', 'shipped', 'completed', 'disputed', 'refunded'].includes(tx.status) && (
+        <Link
+          href={`/receipt/${tx.id}`}
+          target="_blank"
+          className="mt-2 inline-block text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Download receipt
+        </Link>
+      )}
+
       <Card className="mt-5 p-4">
         <TransactionStepper tx={tx} />
       </Card>
