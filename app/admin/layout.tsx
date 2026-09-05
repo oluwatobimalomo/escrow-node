@@ -29,6 +29,12 @@ export default async function AdminLayout({
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link
+              href="/admin/analytics"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Analytics
+            </Link>
+            <Link
               href="/admin/disputes"
               className="text-muted-foreground hover:text-foreground"
             >
