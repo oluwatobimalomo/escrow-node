@@ -31,6 +31,7 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
   const [price, setPrice] = useState(existing ? existing.price : '')
   const [quantity, setQuantity] = useState(existing ? String(existing.quantity) : '1')
   const [category, setCategory] = useState(existing?.category ?? 'other')
+  const [deliveryFee, setDeliveryFee] = useState(existing ? existing.deliveryFee : '0')
   const [active, setActive] = useState(existing?.active ?? true)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(existing?.image ?? null)
@@ -71,6 +72,7 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
           quantity: Number.parseInt(quantity, 10),
           active,
           category,
+          deliveryFee: Number.parseFloat(deliveryFee),
         })
         router.push('/dashboard/listings')
       } else {
@@ -81,6 +83,7 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
           price: Number.parseFloat(price),
           quantity: Number.parseInt(quantity, 10),
           category,
+          deliveryFee: Number.parseFloat(deliveryFee),
         })
         router.push(`/dashboard/marketplace/${id}`)
       }
@@ -175,6 +178,22 @@ export function ListingForm({ existing }: { existing?: ProductListing }) {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="listing-delivery-fee">Delivery fee (NGN)</Label>
+        <Input
+          id="listing-delivery-fee"
+          type="number"
+          min="0"
+          step="0.01"
+          value={deliveryFee}
+          onChange={(e) => setDeliveryFee(e.target.value)}
+          required
+        />
+        <p className="text-xs text-muted-foreground">
+          What you charge for delivery, on top of the item price. Enter 0 if delivery is free.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

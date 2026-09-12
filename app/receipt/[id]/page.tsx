@@ -69,9 +69,17 @@ export default async function ReceiptPage({
               <p className="mt-1 text-sm text-muted-foreground">{tx.description}</p>
             )}
           </div>
-          <p className="whitespace-nowrap font-mono text-2xl font-semibold text-foreground">
-            {formatNaira(tx.amount)}
-          </p>
+          <div className="text-right">
+            <p className="whitespace-nowrap font-mono text-2xl font-semibold text-foreground">
+              {formatNaira(tx.amount)}
+            </p>
+            {Number.parseFloat(tx.deliveryFee) > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Item {formatNaira(Number.parseFloat(tx.amount) - Number.parseFloat(tx.deliveryFee))}{' '}
+                + Delivery {formatNaira(tx.deliveryFee)}
+              </p>
+            )}
+          </div>
         </div>
 
         <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-border pt-6 text-sm">
@@ -97,6 +105,12 @@ export default async function ReceiptPage({
               {seller?.name ?? tx.counterpartyEmail ?? '\u2014'}
             </dd>
           </div>
+          {tx.deliveryAddress && (
+            <div className="sm:col-span-2">
+              <dt className="text-muted-foreground">Delivery address</dt>
+              <dd className="mt-0.5 font-medium text-foreground">{tx.deliveryAddress}</dd>
+            </div>
+          )}
           {tx.fundedAt && (
             <div>
               <dt className="text-muted-foreground">Funded</dt>
