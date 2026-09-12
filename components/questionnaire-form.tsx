@@ -59,6 +59,18 @@ const TRUST_ITEMS: { text: string; tag: string }[] = [
     text: 'I would feel comfortable buying from a marketplace listing posted by someone I don’t already know, because the transaction is protected by escrow.',
     tag: 'marketplace trust',
   },
+  {
+    text: 'Being able to turn on two-factor authentication made me feel more secure about my account.',
+    tag: 'security perception',
+  },
+  {
+    text: 'Real-time notifications, shipment tracking, and in-app messages from the other party made the transaction feel more transparent.',
+    tag: 'transparency',
+  },
+  {
+    text: 'Being able to download a receipt for a transaction made me feel more confident it was properly documented.',
+    tag: 'recordkeeping',
+  },
 ]
 
 const QUAL_ITEMS: { id: 'q1' | 'q2' | 'q3' | 'q4'; text: string }[] = [
@@ -125,7 +137,7 @@ export function QuestionnaireForm() {
   const [started, setStarted] = useState(false)
 
   const [susAnswers, setSusAnswers] = useState<(number | null)[]>(Array(10).fill(null))
-  const [trustAnswers, setTrustAnswers] = useState<(number | null)[]>(Array(7).fill(null))
+  const [trustAnswers, setTrustAnswers] = useState<(number | null)[]>(Array(10).fill(null))
   const [qualAnswers, setQualAnswers] = useState<QualAnswers>({ q1: '', q2: '', q3: '', q4: '' })
 
   const [validationMsg, setValidationMsg] = useState('')
@@ -136,7 +148,7 @@ export function QuestionnaireForm() {
 
   const susDoneFrac = useMemo(() => susAnswers.filter((a) => a !== null).length / 10, [susAnswers])
   const trustDoneFrac = useMemo(
-    () => trustAnswers.filter((a) => a !== null).length / 7,
+    () => trustAnswers.filter((a) => a !== null).length / 10,
     [trustAnswers],
   )
   const qualDoneFrac = useMemo(
@@ -381,7 +393,7 @@ export function QuestionnaireForm() {
             <div>
               {TRUST_ITEMS.map((item, i) => (
                 <div className={styles.item} id={`item-trust-${i + 1}`} key={i}>
-                  <div className={styles.itemNum}>{i + 1} / 7</div>
+                  <div className={styles.itemNum}>{i + 1} / 10</div>
                   <div className={styles.itemText}>
                     {item.text}
                     {item.tag && <span className={styles.dimTag}>{item.tag}</span>}
