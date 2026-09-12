@@ -78,6 +78,7 @@ export function TransactionActions({
   const [comment, setComment] = useState('')
   const [fundOpen, setFundOpen] = useState(false)
   const [fundEmail, setFundEmail] = useState(defaultEmail)
+  const [deliveryAddress, setDeliveryAddress] = useState('')
   const [redirecting, setRedirecting] = useState(false)
 
   const run = async (
@@ -155,6 +156,18 @@ export function TransactionActions({
               placeholder="you@example.com"
             />
           </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="fund-delivery-address">Delivery address</Label>
+            <Textarea
+              id="fund-delivery-address"
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
+              required
+              rows={2}
+              maxLength={500}
+              placeholder="Where should this be delivered?"
+            />
+          </div>
           {error && (
             <p className="text-sm text-destructive" role="alert">
               {error}
@@ -169,6 +182,7 @@ export function TransactionActions({
                   const { authorizationUrl } = await initiateFunding(
                     transactionId,
                     fundEmail,
+                    deliveryAddress,
                   )
                   setRedirecting(true)
                   window.location.href = authorizationUrl
@@ -179,7 +193,7 @@ export function TransactionActions({
                   setPending(null)
                 }
               }}
-              disabled={pending !== null || redirecting || !fundEmail.trim()}
+              disabled={pending !== null || redirecting || !fundEmail.trim() || !deliveryAddress.trim()}
             >
               {redirecting
                 ? 'Redirecting to Paystack...'

@@ -26,6 +26,7 @@ export function NewTransactionForm({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
+  const [deliveryFee, setDeliveryFee] = useState('0')
   const [counterpartyEmail, setCounterpartyEmail] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -65,6 +66,7 @@ export function NewTransactionForm({
         description,
         image,
         amount: Number.parseFloat(amount),
+        deliveryFee: Number.parseFloat(deliveryFee),
         role,
         counterpartyEmail,
       })
@@ -180,7 +182,7 @@ export function NewTransactionForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="amount">Amount (NGN)</Label>
+          <Label htmlFor="amount">Item price (NGN)</Label>
           <Input
             id="amount"
             type="number"
@@ -192,21 +194,46 @@ export function NewTransactionForm({
             required
             placeholder="250000"
           />
-          {role === 'seller' && Number.parseFloat(amount) > 0 && (
-            <p className="text-xs text-muted-foreground">
-              You&apos;d receive{' '}
-              {formatNaira(
-                Number.parseFloat(amount) *
-                  (1 - getFeeTier(Number.parseFloat(amount)).percent / 100),
-              )}{' '}
-              after the {getFeeTier(Number.parseFloat(amount)).percent}%
-              platform fee, 48 hours after delivery is confirmed.{' '}
-              <a href="/pricing" target="_blank" className="underline underline-offset-4">
-                Full pricing
-              </a>
-              .
-            </p>
-          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="delivery-fee">Delivery fee (NGN)</Label>
+          <Input
+            id="delivery-fee"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={deliveryFee}
+            onChange={(e) => setDeliveryFee(e.target.value)}
+            required
+            placeholder="0"
+          />
+          <p className="text-xs text-muted-foreground">
+            Whoever is the seller here states this — enter 0 if delivery is free.
+          </p>
+          {role === 'seller' &&
+            Number.parseFloat(amount) > 0 &&
+            Number.isFinite(Number.parseFloat(deliveryFee)) && (
+              <p className="text-xs text-muted-foreground">
+                On a total of{' '}
+                {formatNaira(Number.parseFloat(amount) + Number.parseFloat(deliveryFee))}, you&apos;d
+                receive{' '}
+                {formatNaira(
+                  (Number.parseFloat(amount) + Number.parseFloat(deliveryFee)) *
+                    (1 -
+                      getFeeTier(Number.parseFloat(amount) + Number.parseFloat(deliveryFee)).percent /
+                        100),
+                )}{' '}
+                after the{' '}
+                {getFeeTier(Number.parseFloat(amount) + Number.parseFloat(deliveryFee)).percent}%
+                platform fee, 48 hours after delivery is confirmed.{' '}
+                <a href="/pricing" target="_blank" className="underline underline-offset-4">
+                  Full pricing
+                </a>
+                .
+              </p>
+            )}
         </div>
 
         <div className="flex flex-col gap-2">

@@ -130,6 +130,7 @@ export async function createListing(input: {
   price: number
   quantity: number
   category?: string
+  deliveryFee: number
 }) {
   const me = await getSessionUser()
   await enforceRateLimit('general', me.id)
@@ -140,6 +141,9 @@ export async function createListing(input: {
   if (!Number.isFinite(input.price) || input.price <= 0)
     throw new Error('Price must be greater than zero')
   if (input.price > 100_000_000) throw new Error('Price is too large')
+  if (!Number.isFinite(input.deliveryFee) || input.deliveryFee < 0)
+    throw new Error('Delivery fee must be zero or greater')
+  if (input.deliveryFee > 100_000_000) throw new Error('Delivery fee is too large')
   if (!Number.isInteger(input.quantity) || input.quantity < 1)
     throw new Error('Quantity must be at least 1')
   if (input.quantity > 100_000) throw new Error('Quantity is too large')
@@ -161,6 +165,7 @@ export async function createListing(input: {
     price: input.price.toFixed(2),
     quantity: input.quantity,
     category,
+    deliveryFee: input.deliveryFee.toFixed(2),
   })
   revalidatePath('/dashboard/listings')
   revalidatePath('/dashboard/marketplace')
@@ -177,6 +182,7 @@ export async function updateListing(
     quantity: number
     active: boolean
     category?: string
+    deliveryFee: number
   },
 ) {
   const me = await getSessionUser()
@@ -193,6 +199,8 @@ export async function updateListing(
   if (!title) throw new Error('Title is required')
   if (!Number.isFinite(input.price) || input.price <= 0)
     throw new Error('Price must be greater than zero')
+  if (!Number.isFinite(input.deliveryFee) || input.deliveryFee < 0)
+    throw new Error('Delivery fee must be zero or greater')
   if (!Number.isInteger(input.quantity) || input.quantity < 0)
     throw new Error('Quantity cannot be negative')
   if (
@@ -211,6 +219,7 @@ export async function updateListing(
       quantity: input.quantity,
       active: input.active,
       category,
+      deliveryFee: input.deliveryFee.toFixed(2),
       updatedAt: new Date(),
     })
     .where(eq(productListings.id, id))
@@ -286,6 +295,10 @@ export async function buyFromListing(listingId: string) {
       .where(eq(productListings.id, listingId))
   }
 
+  const totalAmount = (
+    Number.parseFloat(listing.price) + Number.parseFloat(listing.deliveryFee)
+  ).toFixed(2)
+
   const id = randomUUID()
   await db.insert(transactions).values({
     id,
@@ -293,7 +306,8 @@ export async function buyFromListing(listingId: string) {
     title: listing.title,
     description: listing.description,
     image: listing.image,
-    amount: listing.price,
+    amount: totalAmount,
+    deliveryFee: listing.deliveryFee,
     buyerId: me.id,
     sellerId: listing.sellerId,
     counterpartyEmail: seller.email,

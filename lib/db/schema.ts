@@ -113,6 +113,15 @@ export const transactions = pgTable('transactions', {
   // emails so both parties can visually confirm what they're transacting.
   image: text('image'),
   amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
+  // Portion of `amount` that is delivery/shipping cost rather than item
+  // price -- `amount` remains the single total used everywhere else
+  // (platform fee %, payout calc, auto-release, refunds); this column
+  // exists only so that total can be broken back down for display.
+  deliveryFee: numeric('deliveryFee', { precision: 14, scale: 2 }).notNull().default('0'),
+  // Captured from the buyer at funding time (see initiateFunding), not at
+  // creation -- the buyer may not be settled on where they want the item
+  // sent until they're actually committing to pay.
+  deliveryAddress: text('deliveryAddress'),
   currency: text('currency').notNull().default('NGN'),
   buyerId: text('buyerId'),
   sellerId: text('sellerId'),
@@ -250,6 +259,12 @@ export const productListings = pgTable('product_listings', {
   // a DB enum so the category list can change without a migration --
   // validated against the allowed list in app/actions/listings.ts instead.
   category: text('category').notNull().default('other'),
+  // Seller-stated delivery/shipping cost, separate from item price. Not
+  // optional -- the seller must state a figure (0 is a valid explicit
+  // "free delivery" statement). Rolled into the transaction's total
+  // `amount` at purchase time; kept here as its own column purely so the
+  // breakdown (item price vs delivery) can still be shown/edited later.
+  deliveryFee: numeric('deliveryFee', { precision: 14, scale: 2 }).notNull().default('0'),
   // Remaining stock. A purchase atomically decrements this (see
   // buyFromListing in app/actions/listings.ts) to avoid overselling under
   // concurrent buyers.

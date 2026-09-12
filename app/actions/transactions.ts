@@ -304,6 +304,7 @@ export async function createTransaction(input: {
   description?: string
   image?: string
   amount: number
+  deliveryFee: number
   role: 'buyer' | 'seller'
   counterpartyEmail: string
 }) {
@@ -316,6 +317,9 @@ export async function createTransaction(input: {
   if (!Number.isFinite(input.amount) || input.amount <= 0)
     throw new Error('Amount must be greater than zero')
   if (input.amount > 100_000_000) throw new Error('Amount is too large')
+  if (!Number.isFinite(input.deliveryFee) || input.deliveryFee < 0)
+    throw new Error('Delivery fee must be zero or greater')
+  if (input.deliveryFee > 100_000_000) throw new Error('Delivery fee is too large')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartyEmail))
     throw new Error('Enter a valid counterparty email')
   if (counterpartyEmail === me.email.toLowerCase())
@@ -327,6 +331,8 @@ export async function createTransaction(input: {
   if (input.image && !/^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//.test(input.image))
     throw new Error('Invalid image')
 
+  const totalAmount = (input.amount + input.deliveryFee).toFixed(2)
+
   const id = randomUUID()
   await db.insert(transactions).values({
     id,
@@ -334,7 +340,8 @@ export async function createTransaction(input: {
     title,
     description: input.description?.trim() || null,
     image: input.image || null,
-    amount: input.amount.toFixed(2),
+    amount: totalAmount,
+    deliveryFee: input.deliveryFee.toFixed(2),
     buyerId: input.role === 'buyer' ? me.id : null,
     sellerId: input.role === 'seller' ? me.id : null,
     counterpartyEmail,
@@ -403,12 +410,19 @@ export async function cancelTransaction(id: string) {
   revalidatePath('/dashboard')
 }
 
-export async function initiateFunding(id: string, email: string) {
+export async function initiateFunding(id: string, email: string, deliveryAddress: string) {
   const me = await getSessionUser()
   await enforceRateLimit('money', me.id)
   const trimmedEmail = email.trim().toLowerCase()
   if (!trimmedEmail || !trimmedEmail.includes('@')) {
     throw new Error('A valid email is required for the payment receipt')
+  }
+  const trimmedAddress = deliveryAddress.trim()
+  if (!trimmedAddress) {
+    throw new Error('A delivery address is required before funding')
+  }
+  if (trimmedAddress.length > 500) {
+    throw new Error('Delivery address is too long')
   }
 
   const [tx] = await db
@@ -443,6 +457,7 @@ export async function initiateFunding(id: string, email: string) {
     .set({
       paystackReference: reference,
       payerEmail: trimmedEmail,
+      deliveryAddress: trimmedAddress,
       updatedAt: new Date(),
     })
     .where(eq(transactions.id, id))

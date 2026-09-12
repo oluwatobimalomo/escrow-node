@@ -98,6 +98,12 @@ export default async function TransactionPage({
             <p className="mt-1 font-mono text-3xl font-semibold text-foreground">
               {formatNaira(tx.amount)}
             </p>
+            {Number.parseFloat(tx.deliveryFee) > 0 && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Item {formatNaira(Number.parseFloat(tx.amount) - Number.parseFloat(tx.deliveryFee))}{' '}
+                + Delivery {formatNaira(tx.deliveryFee)}
+              </p>
+            )}
           </div>
           <p className="max-w-[16rem] text-right text-sm text-muted-foreground">
             {STATUS_DESCRIPTIONS[tx.status as TransactionStatus]}
@@ -187,6 +193,14 @@ export default async function TransactionPage({
               <dt className="text-sm text-muted-foreground">Terms</dt>
               <dd className="mt-0.5 text-sm leading-relaxed text-foreground">
                 {tx.description}
+              </dd>
+            </div>
+          )}
+          {tx.deliveryAddress && (
+            <div className="sm:col-span-2">
+              <dt className="text-sm text-muted-foreground">Delivery address</dt>
+              <dd className="mt-0.5 text-sm leading-relaxed text-foreground">
+                {tx.deliveryAddress}
               </dd>
             </div>
           )}
