@@ -5,6 +5,7 @@ import { TwoFactorSection } from '@/components/dashboard/two-factor-section'
 import { ReputationSummary } from '@/components/dashboard/reputation-summary'
 import { BvnVerificationForm } from '@/components/dashboard/bvn-verification-form'
 import { DeleteAccountSection } from '@/components/dashboard/delete-account-section'
+import { DataPrivacySection } from '@/components/dashboard/data-privacy-section'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Link from 'next/link'
@@ -151,6 +152,13 @@ export default async function ProfilePage() {
           enabled={Boolean(profile.twoFactorEnabled)}
           hasPassword={profile.hasPassword}
         />
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="text-lg font-medium text-foreground mb-4">
+          Your data &amp; privacy
+        </h2>
+        <DataPrivacySection />
       </Card>
 
       <DeleteAccountSection hasPassword={profile.hasPassword} />
