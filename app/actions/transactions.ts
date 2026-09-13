@@ -12,6 +12,7 @@ import {
 import { generateTransactionCode } from '@/lib/escrow'
 import { initializePaystackTransaction } from '@/lib/paystack'
 import { calculatePayout, payoutScheduledFor, AUTO_RELEASE_DAYS } from '@/lib/payout'
+import { checkReviewAuthenticity } from '@/lib/review-authenticity'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import {
   notifyTransactionInvited,
@@ -915,13 +916,26 @@ export async function submitReview(
     .limit(1)
   if (existing.length > 0) throw new Error('You already reviewed this transaction')
 
-  await db.insert(reviews).values({
-    transactionId,
-    reviewerId: me.id,
-    revieweeId,
-    rating,
-    comment: comment?.trim() || null,
-  })
+  const trimmedComment = comment?.trim() || null
+  const [inserted] = await db
+    .insert(reviews)
+    .values({
+      transactionId,
+      reviewerId: me.id,
+      revieweeId,
+      rating,
+      comment: trimmedComment,
+    })
+    .returning({ id: reviews.id })
+
+  const authenticity = await checkReviewAuthenticity(trimmedComment, rating)
+  if (inserted && authenticity) {
+    await db
+      .update(reviews)
+      .set({ authenticityScore: authenticity.score, authenticityNote: authenticity.note })
+      .where(eq(reviews.id, inserted.id))
+  }
+
   await logEvent(transactionId, me.id, 'reviewed', `${rating}/5 stars`)
   revalidatePath(`/dashboard/transactions/${transactionId}`)
 }

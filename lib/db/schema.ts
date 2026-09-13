@@ -208,6 +208,14 @@ export const reviews = pgTable('reviews', {
   revieweeId: text('revieweeId').notNull(),
   rating: integer('rating').notNull(),
   comment: text('comment'),
+  // Best-effort LLM authenticity signal (see lib/review-authenticity.ts).
+  // Null until/unless the check runs successfully -- advisory only, feeds
+  // an admin-facing moderation view, never shown publicly or used to
+  // auto-remove a review. Short/empty comments are never scored (see the
+  // length check in checkReviewAuthenticity), so null does not imply
+  // anything suspicious on its own.
+  authenticityScore: integer('authenticityScore'),
+  authenticityNote: text('authenticityNote'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
